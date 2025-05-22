@@ -39,15 +39,26 @@ export enum ChatFileType {
   PLAIN_TEXT = "plain_text",
   CSV = "csv",
   USER_KNOWLEDGE = "user_knowledge",
+  DATASET = "dataset",
 }
 
 export interface FileDescriptor {
   id: string;
   type: ChatFileType;
   name?: string | null;
-
+  
   // FE only
   isUploading?: boolean;
+  
+  // Metadata for dataset files used by code interpreter
+  metadata?: {
+    fileType: string;
+    fileName: string;
+    fileSize: number;
+    lastModified: string;
+    path: string;
+    isDataset?: boolean;
+  };
 }
 
 export interface FileDescriptorWithHighlights extends FileDescriptor {

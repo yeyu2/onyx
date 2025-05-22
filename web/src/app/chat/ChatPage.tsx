@@ -144,6 +144,7 @@ const SYSTEM_MESSAGE_ID = -3;
 export enum UploadIntent {
   ATTACH_TO_MESSAGE, // For files uploaded via ChatInputBar (paste, drag/drop)
   ADD_TO_DOCUMENTS, // For files uploaded via FilePickerModal or similar (just add to repo)
+  DATASET, // For dataset files that won't be indexed but will be used by the code interpreter
 }
 
 export function ChatPage({
@@ -1429,7 +1430,33 @@ export function ChatPage({
 
       const stack = new CurrentMessageFIFO();
 
-      updateCurrentMessageFIFO(stack, {
+      // Check if there are any dataset files in the current message
+      const filesForUpload = overrideFileDescriptors || currentMessageFiles;
+      // Identify datasets by the metadata flag instead of file type
+      const datasetFiles = filesForUpload.filter(file => file.metadata?.isDataset === true);
+      
+      // Flag to determine if this is a dataset query (suppress RAG)
+      const isDatasetQuery = datasetFiles.length > 0;
+      
+      // Create dataset instructions for the code interpreter if there are dataset files
+      let datasetInstructions = "";
+      if (datasetFiles.length > 0) {
+        datasetInstructions = "IMPORTANT: The user has uploaded dataset files for analysis. When asked about these datasets:\n";
+        datasetInstructions += "1. DO NOT use RAG or retrieved content to answer questions about these files.\n";
+        datasetInstructions += "2. ONLY generate Python code that could analyze the data without executing it.\n";
+        datasetInstructions += "3. Explain what the code would do if executed, but do not claim to have actual results.\n\n";
+        datasetInstructions += "The following dataset files are available:\n";
+        datasetFiles.forEach(file => {
+          const meta = file.metadata || { path: `/datasets/${file.name}` };
+          const fileType = 'fileType' in meta ? meta.fileType : 'unknown type';
+          const fileSize = 'fileSize' in meta ? `${(meta.fileSize / 1024).toFixed(2)}KB` : 'unknown size';
+          datasetInstructions += `- ${file.name} (${fileType}, ${fileSize})\n`;
+          datasetInstructions += `  Available at: ${meta.path}\n`;
+        });
+        datasetInstructions += "\nWhen analyzing these datasets, use code like:\n```python\nimport pandas as pd\nimport matplotlib.pyplot as plt\nimport numpy as np\n\n# Example for loading a CSV file\ndf = pd.read_csv('/datasets/filename.csv')\n# Or for Excel\n# df = pd.read_excel('/datasets/filename.xlsx')\n# Or for JSON\n# df = pd.json_normalize(pd.read_json('/datasets/filename.json'))\n\n# Now analyze the data...\n```";
+      }
+
+      await updateCurrentMessageFIFO(stack, {
         signal: controller.signal,
         message: currMessage,
         alternateAssistantId: currentAssistantId,
@@ -1438,27 +1465,25 @@ export function ChatPage({
           regenerationRequest?.parentMessage.messageId ||
           lastSuccessfulMessageId,
         chatSessionId: currChatSessionId,
-        filters: buildFilters(
+        filters: isDatasetQuery ? null : buildFilters(
           filterManager.selectedSources,
           filterManager.selectedDocumentSets,
           filterManager.timeRange,
           filterManager.selectedTags,
           selectedFiles.map((file) => file.id)
-          // selectedFolders.map((folder) => folder.id)
         ),
-        selectedDocumentIds: selectedDocuments
+        selectedDocumentIds: isDatasetQuery ? [] : selectedDocuments
           .filter(
             (document) =>
               document.db_doc_id !== undefined && document.db_doc_id !== null
           )
           .map((document) => document.db_doc_id as number),
         queryOverride,
-        forceSearch,
-        userFolderIds: selectedFolders.map((folder) => folder.id),
-        userFileIds: selectedFiles
+        forceSearch: isDatasetQuery ? false : forceSearch,
+        userFolderIds: isDatasetQuery ? [] : selectedFolders.map((folder) => folder.id),
+        userFileIds: isDatasetQuery ? [] : selectedFiles
           .filter((file) => file.id !== undefined && file.id !== null)
           .map((file) => file.id),
-
         regenerate: regenerationRequest !== undefined,
         modelProvider:
           modelOverride?.name || llmManager.currentLlm.name || undefined,
@@ -1469,12 +1494,16 @@ export function ChatPage({
           undefined,
         temperature: llmManager.temperature || undefined,
         systemPromptOverride:
+          datasetInstructions ? 
+          (searchParams?.get(SEARCH_PARAM_NAMES.SYSTEM_PROMPT) || "") + "\n\n" + datasetInstructions : 
           searchParams?.get(SEARCH_PARAM_NAMES.SYSTEM_PROMPT) || undefined,
         useExistingUserMessage: isSeededChat,
         useLanggraph:
+          !isDatasetQuery && // Don't use Langgraph for dataset queries
           settings?.settings.pro_search_enabled &&
           proSearchEnabled &&
           retrievalEnabled,
+        // disableRetrieval: isDatasetQuery, // Disable retrieval for dataset queries
       });
 
       const delay = (ms: number) => {
@@ -1971,7 +2000,9 @@ export function ChatPage({
       file.type.startsWith("image/")
     );
 
-    if (imageFiles.length > 0 && !llmAcceptsImages) {
+    // Only check for image support if we're not uploading dataset files
+    // Dataset files can include images regardless of model support
+    if (imageFiles.length > 0 && !llmAcceptsImages && intent !== UploadIntent.DATASET) {
       setPopup({
         type: "error",
         message:
@@ -1987,13 +2018,65 @@ export function ChatPage({
     for (let file of acceptedFiles) {
       const formData = new FormData();
       formData.append("files", file);
+      
+      // For dataset files, add a special flag to indicate they shouldn't be indexed
+      if (intent === UploadIntent.DATASET) {
+        formData.append("dataset", "true");
+        
+        // Extract and save any metadata that was attached to the file
+        const fileMetadata = (file as any).datasetMetadata;
+        if (fileMetadata) {
+          formData.append("datasetMetadata", JSON.stringify(fileMetadata));
+        }
+      }
+      
       const response: FileResponse[] = await uploadFile(formData, null);
 
       if (response.length > 0 && response[0] !== undefined) {
         const uploadedFile = response[0];
 
-        if (intent == UploadIntent.ADD_TO_DOCUMENTS) {
+        if (intent === UploadIntent.ADD_TO_DOCUMENTS) {
           addSelectedFile(uploadedFile);
+        } else if (intent === UploadIntent.DATASET) {
+          // Determine appropriate file type based on extension for backend compatibility
+          let fileType = ChatFileType.PLAIN_TEXT; // Default fallback
+          const fileName = uploadedFile.name.toLowerCase();
+          
+          if (fileName.endsWith('.csv')) {
+            fileType = ChatFileType.CSV;
+          } else if (fileName.endsWith('.json')) {
+            fileType = ChatFileType.PLAIN_TEXT; // Use plain_text for JSON
+          } else if (fileName.endsWith('.xlsx') || fileName.endsWith('.xls')) {
+            fileType = ChatFileType.DOCUMENT; // Use document for Excel
+          }
+          
+          // Add the dataset file to a special state that tracks dataset files
+          const datasetFileDescriptor: FileDescriptor = {
+            id: uploadedFile.file_id
+              ? String(uploadedFile.file_id)
+              : String(uploadedFile.id),
+            type: fileType, // Use backend-compatible type
+            name: uploadedFile.name,
+            isUploading: false,
+            // Mark this as dataset in metadata for the frontend
+            metadata: {
+              fileType: file.type,
+              fileName: file.name,
+              fileSize: file.size,
+              lastModified: new Date(file.lastModified).toISOString(),
+              path: `/datasets/${uploadedFile.name}`,
+              isDataset: true // Special flag to identify datasets in the frontend
+            }
+          };
+          
+          // Add to message files
+          setCurrentMessageFiles((prev) => [...prev, datasetFileDescriptor]);
+          
+          // Show success message for dataset files
+          setPopup({
+            type: "success",
+            message: `Dataset file "${uploadedFile.name}" uploaded successfully`,
+          });
         } else {
           const newFileDescriptor: FileDescriptor = {
             // Use file_id (storage ID) if available, otherwise fallback to DB id

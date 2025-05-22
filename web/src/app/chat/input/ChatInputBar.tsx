@@ -1,10 +1,11 @@
 import React, { useContext, useEffect, useMemo, useRef, useState } from "react";
-import { FiPlusCircle, FiPlus, FiX, FiFilter } from "react-icons/fi";
+import { FiPlusCircle, FiPlus, FiX, FiFilter, FiDatabase, FiCode } from "react-icons/fi";
 import { FiLoader } from "react-icons/fi";
 import { ChatInputOption } from "./ChatInputOption";
 import { Persona } from "@/app/admin/assistants/interfaces";
 import LLMPopover from "./LLMPopover";
 import { InputPrompt } from "@/app/chat/interfaces";
+import { DatasetUploadModal } from "../my-documents/components/DatasetUploadModal";
 
 import { FilterManager, getDisplayNameForModel, LlmManager } from "@/lib/hooks";
 import { useChatContext } from "@/components/context/ChatContext";
@@ -444,9 +445,25 @@ export function ChatInputBar({
     }
   };
 
+  const [showDatasetUpload, setShowDatasetUpload] = useState(false);
+
+  // Check if we have dataset files in the current message
+  const hasDatasetFiles = useMemo(() => 
+    currentMessageFiles.some(file => file.metadata?.isDataset === true),
+    [currentMessageFiles]
+  );
+
   return (
     <div id="onyx-chat-input">
-      <div className="flex  justify-center mx-auto">
+      {showDatasetUpload && (
+        <DatasetUploadModal 
+          isOpen={showDatasetUpload}
+          onClose={() => setShowDatasetUpload(false)}
+          handleFileUpload={handleFileUpload}
+        />
+      )}
+      
+      <div className="flex justify-center mx-auto">
         <div
           className="
             max-w-full
@@ -456,6 +473,16 @@ export function ChatInputBar({
             mx-auto
           "
         >
+          {/* Dataset mode indicator */}
+          {hasDatasetFiles && (
+            <div className="mb-2 p-2 bg-blue-50 border border-blue-200 rounded-md flex items-center">
+              <FiCode className="text-blue-500 mr-2" />
+              <span className="text-sm text-blue-700">
+                Dataset Mode: RAG is disabled for dataset analysis. Questions will be answered with code examples.
+              </span>
+            </div>
+          )}
+          
           {showSuggestions && assistantTagOptions.length > 0 && (
             <div
               ref={suggestionsRef}
@@ -669,128 +696,128 @@ export function ChatInputBar({
                       />
                     ))}
 
-                  {/* This is excluding image types because they get rendered differently via currentMessageFiles.map
-                  Seems quite hacky ... all rendering should probably be done in one place? */}
-                  {selectedFiles.map(
-                    (file) =>
-                      !currentMessageFileIds.has(
-                        String(file.file_id || file.id)
-                      ) && (
+                    {/* This is excluding image types because they get rendered differently via currentMessageFiles.map
+                    Seems quite hacky ... all rendering should probably be done in one place? */}
+                    {selectedFiles.map(
+                      (file) =>
+                        !currentMessageFileIds.has(
+                          String(file.file_id || file.id)
+                        ) && (
+                          <SourceChip
+                            key={file.id}
+                            icon={<FileIcon size={16} />}
+                            title={file.name}
+                            onRemove={() => removeSelectedFile(file)}
+                          />
+                        )
+                    )}
+                    {selectedFolders.map((folder) => (
+                      <SourceChip
+                        key={folder.id}
+                        icon={<FolderIcon size={16} />}
+                        title={folder.name}
+                        onRemove={() => removeSelectedFolder(folder)}
+                      />
+                    ))}
+                    {filterManager.timeRange && (
+                      <SourceChip
+                        truncateTitle={false}
+                        key="time-range"
+                        icon={<CalendarIcon size={12} />}
+                        title={`${getFormattedDateRangeString(
+                          filterManager.timeRange.from,
+                          filterManager.timeRange.to
+                        )}`}
+                        onRemove={() => {
+                          filterManager.setTimeRange(null);
+                        }}
+                      />
+                    )}
+                    {filterManager.selectedDocumentSets.length > 0 &&
+                      filterManager.selectedDocumentSets.map((docSet, index) => (
                         <SourceChip
-                          key={file.id}
-                          icon={<FileIcon size={16} />}
-                          title={file.name}
-                          onRemove={() => removeSelectedFile(file)}
+                          key={`doc-set-${index}`}
+                          icon={<DocumentIcon2 size={16} />}
+                          title={docSet}
+                          onRemove={() => {
+                            filterManager.setSelectedDocumentSets(
+                              filterManager.selectedDocumentSets.filter(
+                                (ds) => ds !== docSet
+                              )
+                            );
+                          }}
+                        />
+                      ))}
+                    {filterManager.selectedSources.length > 0 &&
+                      filterManager.selectedSources.map((source, index) => (
+                        <SourceChip
+                          key={`source-${index}`}
+                          icon={
+                            <SourceIcon
+                              sourceType={source.internalName}
+                              iconSize={16}
+                            />
+                          }
+                          title={source.displayName}
+                          onRemove={() => {
+                            filterManager.setSelectedSources(
+                              filterManager.selectedSources.filter(
+                                (s) => s.internalName !== source.internalName
+                              )
+                            );
+                          }}
+                        />
+                      ))}
+                    {selectedDocuments.length > 0 && (
+                      <SourceChip
+                        key="selected-documents"
+                        onClick={() => {
+                          toggleDocumentSidebar();
+                        }}
+                        icon={<FileIcon size={16} />}
+                        title={`${selectedDocuments.length} selected`}
+                        onRemove={removeDocs}
+                      />
+                    )}
+                    {currentMessageFiles.map((file, index) =>
+                      file.type === ChatFileType.IMAGE ? (
+                        <SourceChip
+                          key={`file-${index}`}
+                          icon={
+                            file.isUploading ? (
+                              <FiLoader className="animate-spin" />
+                            ) : (
+                              <img
+                                className="h-full py-.5 object-cover rounded-lg bg-background cursor-pointer"
+                                src={buildImgUrl(file.id)}
+                                alt={file.name || "Uploaded image"}
+                              />
+                            )
+                          }
+                          title={file.name || "File" + file.id}
+                          onRemove={() => {
+                            setCurrentMessageFiles(
+                              currentMessageFiles.filter(
+                                (fileInFilter) => fileInFilter.id !== file.id
+                              )
+                            );
+                          }}
+                        />
+                      ) : (
+                        <SourceChip
+                          key={`file-${index}`}
+                          icon={<FileIcon className="text-red-500" size={16} />}
+                          title={file.name || "File"}
+                          onRemove={() => {
+                            setCurrentMessageFiles(
+                              currentMessageFiles.filter(
+                                (fileInFilter) => fileInFilter.id !== file.id
+                              )
+                            );
+                          }}
                         />
                       )
-                  )}
-                  {selectedFolders.map((folder) => (
-                    <SourceChip
-                      key={folder.id}
-                      icon={<FolderIcon size={16} />}
-                      title={folder.name}
-                      onRemove={() => removeSelectedFolder(folder)}
-                    />
-                  ))}
-                  {filterManager.timeRange && (
-                    <SourceChip
-                      truncateTitle={false}
-                      key="time-range"
-                      icon={<CalendarIcon size={12} />}
-                      title={`${getFormattedDateRangeString(
-                        filterManager.timeRange.from,
-                        filterManager.timeRange.to
-                      )}`}
-                      onRemove={() => {
-                        filterManager.setTimeRange(null);
-                      }}
-                    />
-                  )}
-                  {filterManager.selectedDocumentSets.length > 0 &&
-                    filterManager.selectedDocumentSets.map((docSet, index) => (
-                      <SourceChip
-                        key={`doc-set-${index}`}
-                        icon={<DocumentIcon2 size={16} />}
-                        title={docSet}
-                        onRemove={() => {
-                          filterManager.setSelectedDocumentSets(
-                            filterManager.selectedDocumentSets.filter(
-                              (ds) => ds !== docSet
-                            )
-                          );
-                        }}
-                      />
-                    ))}
-                  {filterManager.selectedSources.length > 0 &&
-                    filterManager.selectedSources.map((source, index) => (
-                      <SourceChip
-                        key={`source-${index}`}
-                        icon={
-                          <SourceIcon
-                            sourceType={source.internalName}
-                            iconSize={16}
-                          />
-                        }
-                        title={source.displayName}
-                        onRemove={() => {
-                          filterManager.setSelectedSources(
-                            filterManager.selectedSources.filter(
-                              (s) => s.internalName !== source.internalName
-                            )
-                          );
-                        }}
-                      />
-                    ))}
-                  {selectedDocuments.length > 0 && (
-                    <SourceChip
-                      key="selected-documents"
-                      onClick={() => {
-                        toggleDocumentSidebar();
-                      }}
-                      icon={<FileIcon size={16} />}
-                      title={`${selectedDocuments.length} selected`}
-                      onRemove={removeDocs}
-                    />
-                  )}
-                  {currentMessageFiles.map((file, index) =>
-                    file.type === ChatFileType.IMAGE ? (
-                      <SourceChip
-                        key={`file-${index}`}
-                        icon={
-                          file.isUploading ? (
-                            <FiLoader className="animate-spin" />
-                          ) : (
-                            <img
-                              className="h-full py-.5 object-cover rounded-lg bg-background cursor-pointer"
-                              src={buildImgUrl(file.id)}
-                              alt={file.name || "Uploaded image"}
-                            />
-                          )
-                        }
-                        title={file.name || "File" + file.id}
-                        onRemove={() => {
-                          setCurrentMessageFiles(
-                            currentMessageFiles.filter(
-                              (fileInFilter) => fileInFilter.id !== file.id
-                            )
-                          );
-                        }}
-                      />
-                    ) : (
-                      <SourceChip
-                        key={`file-${index}`}
-                        icon={<FileIcon className="text-red-500" size={16} />}
-                        title={file.name || "File"}
-                        onRemove={() => {
-                          setCurrentMessageFiles(
-                            currentMessageFiles.filter(
-                              (fileInFilter) => fileInFilter.id !== file.id
-                            )
-                          );
-                        }}
-                      />
-                    )
-                  )}
+                    )}
                 </div>
               </div>
             )}
@@ -805,6 +832,16 @@ export function ChatInputBar({
                     toggleDocSelection();
                   }}
                   tooltipContent={"Upload files and attach user files"}
+                />
+
+                <ChatInputOption
+                  flexPriority="stiff"
+                  name="Dataset"
+                  Icon={FiDatabase}
+                  onClick={() => {
+                    setShowDatasetUpload(true);
+                  }}
+                  tooltipContent={"Upload dataset files for code interpreter"}
                 />
 
                 <LLMPopover
