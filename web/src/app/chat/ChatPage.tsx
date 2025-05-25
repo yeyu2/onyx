@@ -136,6 +136,7 @@ import {
 import { ChatSearchModal } from "./chat_search/ChatSearchModal";
 import { ErrorBanner } from "./message/Resubmit";
 import MinimalMarkdown from "@/components/chat/MinimalMarkdown";
+import { useAvailableDatasets } from "../admin/documents/datasets/hooks";
 
 const TEMP_USER_MESSAGE_ID = -1;
 const TEMP_ASSISTANT_MESSAGE_ID = -2;
@@ -175,6 +176,7 @@ export function ChatPage({
     shouldShowWelcomeModal,
     refreshChatSessions,
     proSearchToggled,
+    availableDatasets,
   } = useChatContext();
 
   const {
@@ -900,7 +902,13 @@ export function ChatPage({
     fetchMaxTokens();
   }, [liveAssistant]);
 
-  const filterManager = useFilters();
+  const filterManager = useFilters({
+    defaultFilters: "",
+    availableSources: availableSources || [],
+    availableDocumentSets: documentSets.map(ds => ds.name),
+    availableTags: tags || []
+  });
+
   const [isChatSearchModalOpen, setIsChatSearchModalOpen] = useState(false);
 
   const [currentFeedback, setCurrentFeedback] = useState<
@@ -1436,24 +1444,63 @@ export function ChatPage({
       const datasetFiles = filesForUpload.filter(file => file.metadata?.isDataset === true);
       
       // Flag to determine if this is a dataset query (suppress RAG)
-      const isDatasetQuery = datasetFiles.length > 0;
+      const isDatasetQuery = datasetFiles.length > 0 || filterManager.selectedDatasets.length > 0;
       
       // Create dataset instructions for the code interpreter if there are dataset files
       let datasetInstructions = "";
-      if (datasetFiles.length > 0) {
-        datasetInstructions = "IMPORTANT: The user has uploaded dataset files for analysis. When asked about these datasets:\n";
-        datasetInstructions += "1. DO NOT use RAG or retrieved content to answer questions about these files.\n";
+      
+      // Check if there are selected datasets from the filter
+      const hasSelectedDatasets = filterManager.selectedDatasets.length > 0;
+      
+      if (datasetFiles.length > 0 || hasSelectedDatasets) {
+        datasetInstructions = "IMPORTANT: The user has dataset files or filtered for specific datasets for analysis. When asked about these datasets:\n";
+        datasetInstructions += "1. DO NOT use RAG or retrieved content to answer questions about these datasets.\n";
         datasetInstructions += "2. ONLY generate Python code that could analyze the data without executing it.\n";
         datasetInstructions += "3. Explain what the code would do if executed, but do not claim to have actual results.\n\n";
-        datasetInstructions += "The following dataset files are available:\n";
-        datasetFiles.forEach(file => {
-          const meta = file.metadata || { path: `/datasets/${file.name}` };
-          const fileType = 'fileType' in meta ? meta.fileType : 'unknown type';
-          const fileSize = 'fileSize' in meta ? `${(meta.fileSize / 1024).toFixed(2)}KB` : 'unknown size';
-          datasetInstructions += `- ${file.name} (${fileType}, ${fileSize})\n`;
-          datasetInstructions += `  Available at: ${meta.path}\n`;
-        });
-        datasetInstructions += "\nWhen analyzing these datasets, use code like:\n```python\nimport pandas as pd\nimport matplotlib.pyplot as plt\nimport numpy as np\n\n# Example for loading a CSV file\ndf = pd.read_csv('/datasets/filename.csv')\n# Or for Excel\n# df = pd.read_excel('/datasets/filename.xlsx')\n# Or for JSON\n# df = pd.json_normalize(pd.read_json('/datasets/filename.json'))\n\n# Now analyze the data...\n```";
+        
+        // Add information about selected datasets from filters
+        if (hasSelectedDatasets) {
+          datasetInstructions += "Selected datasets:\n";
+          filterManager.selectedDatasets.forEach(datasetName => {
+            datasetInstructions += `- ${datasetName} (available at: /datasets/${datasetName})\n`;
+          });
+          datasetInstructions += "\n";
+        }
+        
+        // Add information about uploaded dataset files
+        if (datasetFiles.length > 0) {
+          datasetInstructions += "The following dataset files are available:\n";
+          datasetFiles.forEach(file => {
+            const meta = file.metadata || { path: `/datasets/${file.name}` };
+            const fileType = 'fileType' in meta ? meta.fileType : 'unknown type';
+            const fileSize = 'fileSize' in meta ? `${(meta.fileSize / 1024).toFixed(2)}KB` : 'unknown size';
+            datasetInstructions += `- ${file.name} (${fileType}, ${fileSize})\n`;
+            datasetInstructions += `  Available at: ${meta.path}\n`;
+          });
+        }
+        
+        datasetInstructions += "\nWhen analyzing these datasets, use code like:\n```python\nimport pandas as pd\nimport matplotlib.pyplot as plt\nimport numpy as np\n\n";
+        
+        // Add specific dataset loading examples based on available datasets
+        if (hasSelectedDatasets) {
+          datasetInstructions += "# Example for loading these datasets:\n";
+          filterManager.selectedDatasets.forEach(datasetName => {
+            const fileExt = datasetName.split('.').pop()?.toLowerCase();
+            if (fileExt === 'csv') {
+              datasetInstructions += `df_${datasetName.replace(/\.\w+$/, '').replace(/\W+/g, '_')} = pd.read_csv('/datasets/${datasetName}')\n`;
+            } else if (fileExt === 'xlsx' || fileExt === 'xls') {
+              datasetInstructions += `df_${datasetName.replace(/\.\w+$/, '').replace(/\W+/g, '_')} = pd.read_excel('/datasets/${datasetName}')\n`;
+            } else if (fileExt === 'json') {
+              datasetInstructions += `df_${datasetName.replace(/\.\w+$/, '').replace(/\W+/g, '_')} = pd.json_normalize(pd.read_json('/datasets/${datasetName}'))\n`;
+            } else {
+              datasetInstructions += `# For '${datasetName}', determine the appropriate method to load based on file type\n`;
+            }
+          });
+        } else {
+          datasetInstructions += "# Example for loading a CSV file\ndf = pd.read_csv('/datasets/filename.csv')\n# Or for Excel\n# df = pd.read_excel('/datasets/filename.xlsx')\n# Or for JSON\n# df = pd.json_normalize(pd.read_json('/datasets/filename.json'))\n";
+        }
+        
+        datasetInstructions += "\n# Now analyze the data...\n```";
       }
 
       await updateCurrentMessageFIFO(stack, {
@@ -1470,7 +1517,9 @@ export function ChatPage({
           filterManager.selectedDocumentSets,
           filterManager.timeRange,
           filterManager.selectedTags,
-          selectedFiles.map((file) => file.id)
+          selectedFiles.map((file) => file.id),
+          // Don't send dataset filters to Vespa search to avoid 503 errors
+          [] // Vespa is returning 503 errors when dataset filters are included
         ),
         selectedDocumentIds: isDatasetQuery ? [] : selectedDocuments
           .filter(
@@ -1495,7 +1544,9 @@ export function ChatPage({
         temperature: llmManager.temperature || undefined,
         systemPromptOverride:
           datasetInstructions ? 
-          (searchParams?.get(SEARCH_PARAM_NAMES.SYSTEM_PROMPT) || "") + "\n\n" + datasetInstructions : 
+          (searchParams?.get(SEARCH_PARAM_NAMES.SYSTEM_PROMPT) || "") + "\n\n" + 
+          (filterManager.selectedDatasets.length > 0 ? `Using datasets: ${filterManager.selectedDatasets.map(name => `${name} (/datasets/${name})`).join(", ")}\n` : "") + 
+          datasetInstructions : 
           searchParams?.get(SEARCH_PARAM_NAMES.SYSTEM_PROMPT) || undefined,
         useExistingUserMessage: isSeededChat,
         useLanggraph:
@@ -2400,6 +2451,10 @@ export function ChatPage({
         : [...prev, document]
     );
   };
+
+  // If datasets aren't available in context, fetch them directly
+  const { datasets: fetchedDatasets } = useAvailableDatasets();
+  const datasetsForFilter = availableDatasets?.length ? availableDatasets : fetchedDatasets;
 
   return (
     <>
@@ -3428,8 +3483,13 @@ export function ChatPage({
                               selectedDocuments={selectedDocuments}
                               message={message}
                               setMessage={setMessage}
-                              stopGenerating={stopGenerating}
-                              onSubmit={onSubmit}
+                              onSubmit={() => {
+                                if (currentSessionChatState === "streaming" || currentSessionChatState === "loading") {
+                                  stopGenerating();
+                                } else {
+                                  onSubmit();
+                                }
+                              }}
                               chatState={currentSessionChatState}
                               alternativeAssistant={alternativeAssistant}
                               selectedAssistant={
@@ -3437,8 +3497,10 @@ export function ChatPage({
                               }
                               setAlternativeAssistant={setAlternativeAssistant}
                               setFiles={setCurrentMessageFiles}
+                              files={currentMessageFiles}
                               handleFileUpload={handleImageUpload}
                               textAreaRef={textAreaRef}
+                              availableDatasets={datasetsForFilter}
                             />
                             {enterpriseSettings &&
                               enterpriseSettings.custom_lower_disclaimer_content && (

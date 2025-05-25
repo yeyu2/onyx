@@ -57,6 +57,7 @@ from onyx.server.documents.credential import router as credential_router
 from onyx.server.documents.document import router as document_router
 from onyx.server.documents.standard_oauth import router as standard_oauth_router
 from onyx.server.features.document_set.api import router as document_set_router
+from onyx.server.features.dataset.router import dataset_router
 from onyx.server.features.folder.api import router as folder_router
 from onyx.server.features.input_prompt.api import (
     admin_router as admin_input_prompt_router,
@@ -330,6 +331,7 @@ def get_application(lifespan_override: Lifespan | None = None) -> FastAPI:
     include_router_with_global_prefix_prepended(application, user_documents_router)
     include_router_with_global_prefix_prepended(application, folder_router)
     include_router_with_global_prefix_prepended(application, document_set_router)
+    include_router_with_global_prefix_prepended(application, dataset_router)
     include_router_with_global_prefix_prepended(application, search_settings_router)
     include_router_with_global_prefix_prepended(
         application, slack_bot_management_router

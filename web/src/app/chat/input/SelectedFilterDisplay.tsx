@@ -1,6 +1,6 @@
 import { SourceIcon } from "@/components/SourceIcon";
 import React from "react";
-import { FiBookmark, FiTag, FiX } from "react-icons/fi";
+import { FiBookmark, FiTag, FiX, FiGrid } from "react-icons/fi";
 import { FilterManager } from "@/lib/hooks";
 import { DateRangePickerValue } from "@/components/dateRangeSelectors/AdminDateRangeSelector";
 
@@ -65,13 +65,16 @@ export function SelectedFilterDisplay({
     setSelectedDocumentSets,
     selectedTags,
     setSelectedTags,
+    selectedDatasets,
+    setSelectedDatasets,
   } = filterManager;
 
   const anyFilters =
     timeRange !== null ||
     selectedSources.length > 0 ||
     selectedDocumentSets.length > 0 ||
-    selectedTags.length > 0;
+    selectedTags.length > 0 ||
+    selectedDatasets.length > 0;
 
   if (!anyFilters) {
     return null;
@@ -118,6 +121,24 @@ export function SelectedFilterDisplay({
                   <FiBookmark />
                 </div>
                 <span className="ml-2">{documentSetName}</span>
+              </>
+            </SelectedFilter>
+          ))}
+        {selectedDatasets.length > 0 &&
+          selectedDatasets.map((datasetName) => (
+            <SelectedFilter
+              key={datasetName}
+              onClick={() =>
+                setSelectedDatasets((prevDatasets) =>
+                  prevDatasets.filter((d) => d !== datasetName)
+                )
+              }
+            >
+              <>
+                <div>
+                  <FiGrid />
+                </div>
+                <span className="ml-2">{datasetName}</span>
               </>
             </SelectedFilter>
           ))}

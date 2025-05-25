@@ -7,7 +7,8 @@ export const buildFilters = (
   documentSets: string[],
   timeRange: DateRangePickerValue | null,
   tags: Tag[],
-  userFileIds?: number[] | null
+  userFileIds?: number[] | null,
+  datasets?: string[] | null
   // userFolderIds?: number[] | null
 ): Filters => {
   const filters = {
@@ -17,6 +18,7 @@ export const buildFilters = (
     time_cutoff: timeRange?.from ? timeRange.from : null,
     tags: tags,
     user_file_ids: userFileIds || null,
+    datasets: datasets && datasets.length > 0 ? datasets : null,
     // user_folder_ids: userFolderIds || null,
   };
 

@@ -46,7 +46,7 @@ export interface FileDescriptor {
   id: string;
   type: ChatFileType;
   name?: string | null;
-  
+
   // FE only
   isUploading?: boolean;
   

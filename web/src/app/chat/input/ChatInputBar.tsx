@@ -30,7 +30,7 @@ import UnconfiguredProviderText from "@/components/chat/UnconfiguredProviderText
 import { useAssistants } from "@/components/context/AssistantsContext";
 import { CalendarIcon, TagIcon, XIcon, FolderIcon } from "lucide-react";
 import { FilterPopup } from "@/components/search/filtering/FilterPopup";
-import { DocumentSet, Tag } from "@/lib/types";
+import { DocumentSet, Tag, ValidSources } from "@/lib/types";
 import { SourceIcon } from "@/components/SourceIcon";
 import { getFormattedDateRangeString } from "@/lib/dateUtils";
 import { truncateString } from "@/lib/utils";
@@ -41,6 +41,7 @@ import { SettingsContext } from "@/components/settings/SettingsProvider";
 import { getProviderIcon } from "@/app/admin/configuration/llm/utils";
 import { useDocumentsContext } from "../my-documents/DocumentsContext";
 import { UploadIntent } from "../ChatPage";
+import { getSourceMetadata } from "@/lib/sources";
 
 const MAX_INPUT_HEIGHT = 200;
 export const SourceChip2 = ({
@@ -172,28 +173,43 @@ export const SourceChip = ({
   </div>
 );
 
-interface ChatInputBarProps {
-  toggleDocSelection: () => void;
-  removeDocs: () => void;
-  showConfigureAPIKey: () => void;
-  selectedDocuments: OnyxDocument[];
+// Simple FilterButton component
+interface FilterButtonProps {
+  filtersApplied: boolean;
+  hasSearchTerm: boolean;
+}
+
+const FilterButton = ({ filtersApplied, hasSearchTerm }: FilterButtonProps) => (
+  <div className="flex items-center gap-2 cursor-pointer">
+    <FiFilter size={16} className={filtersApplied ? "text-primary" : ""} />
+    <span className="hidden sm:inline">Filters</span>
+  </div>
+);
+
+export interface ChatInputBarProps {
   message: string;
   setMessage: (message: string) => void;
-  stopGenerating: () => void;
   onSubmit: () => void;
+  toggleDocSelection: () => void;
+  toggleDocumentSidebar: () => void;
+  filterManager: FilterManager;
+  // removes all docs currently selected
+  removeDocs: () => void;
+  setFiles: (files: FileDescriptor[]) => void;
+  files: FileDescriptor[];
+  selectedDocuments: OnyxDocument[];
+  showConfigureAPIKey: () => void;
   llmManager: LlmManager;
   chatState: ChatState;
   alternativeAssistant: Persona | null;
   // assistants
   selectedAssistant: Persona;
   setAlternativeAssistant: (alternativeAssistant: Persona | null) => void;
-  toggleDocumentSidebar: () => void;
-  setFiles: (files: FileDescriptor[]) => void;
   handleFileUpload: (files: File[], intent: UploadIntent) => void;
   textAreaRef: React.RefObject<HTMLTextAreaElement>;
-  filterManager: FilterManager;
   availableSources: SourceMetadata[];
   availableDocumentSets: DocumentSet[];
+  availableDatasets?: { id: number; name: string }[];
   availableTags: Tag[];
   retrievalEnabled: boolean;
   proSearchEnabled: boolean;
@@ -210,7 +226,6 @@ export function ChatInputBar({
   selectedDocuments,
   message,
   setMessage,
-  stopGenerating,
   onSubmit,
   chatState,
 
@@ -224,6 +239,7 @@ export function ChatInputBar({
   alternativeAssistant,
   availableSources,
   availableDocumentSets,
+  availableDatasets = [],
   availableTags,
   llmManager,
   proSearchEnabled,
@@ -239,12 +255,17 @@ export function ChatInputBar({
     setCurrentMessageFiles,
   } = useDocumentsContext();
 
-  // Create a Set of IDs from currentMessageFiles for efficient lookup
-  // Assuming FileDescriptor.id corresponds conceptually to FileResponse.file_id or FileResponse.id
-  const currentMessageFileIds = useMemo(
-    () => new Set(currentMessageFiles.map((f) => String(f.id))), // Ensure IDs are strings for comparison
-    [currentMessageFiles]
+  const currentMessageFileIds = new Set(
+    currentMessageFiles.map((file) => file.id)
   );
+
+  const hasDatasetFiles = currentMessageFiles.some(
+    file => file.metadata?.isDataset === true
+  );
+  
+  const hasDatasetFilters = filterManager.selectedDatasets.length > 0;
+  
+  const isDatasetMode = hasDatasetFiles || hasDatasetFilters;
 
   const settings = useContext(SettingsContext);
   useEffect(() => {
@@ -447,11 +468,102 @@ export function ChatInputBar({
 
   const [showDatasetUpload, setShowDatasetUpload] = useState(false);
 
-  // Check if we have dataset files in the current message
-  const hasDatasetFiles = useMemo(() => 
-    currentMessageFiles.some(file => file.metadata?.isDataset === true),
-    [currentMessageFiles]
+  // Filter options display
+  const selectedSourcesIcons = filterManager.selectedSources.map((source) => {
+    console.log("Rendering source chip:", source.displayName);
+    return (
+      <SourceChip2
+        key={source.internalName}
+        icon={<SourceIcon sourceType={source.internalName as ValidSources} iconSize={12} />}
+        title={source.displayName}
+        onRemove={() => {
+          filterManager.setSelectedSources(
+            filterManager.selectedSources.filter(
+              (s) => s.internalName !== source.internalName
+            )
+          );
+        }}
+        includeTooltip
+        includeAnimation
+      />
+    );
+  });
+
+  const selectedTagsIcons = filterManager.selectedTags.map((tag) => {
+    console.log("Rendering tag chip:", `${tag.tag_key}: ${tag.tag_value}`);
+    return (
+      <SourceChip2
+        key={`${tag.tag_key}:${tag.tag_value}`}
+        icon={<TagIcon size={12} className="text-text-900" />}
+        title={`${tag.tag_key}: ${tag.tag_value}`}
+        onRemove={() => {
+          filterManager.setSelectedTags(
+            filterManager.selectedTags.filter(
+              (t) =>
+                !(t.tag_key === tag.tag_key && t.tag_value === tag.tag_value)
+            )
+          );
+        }}
+        includeTooltip
+        includeAnimation
+      />
+    );
+  });
+
+  const selectedDocumentSetsIcons = filterManager.selectedDocumentSets.map(
+    (documentSet) => {
+      console.log("Rendering document set chip:", documentSet);
+      return (
+        <SourceChip2
+          key={documentSet}
+          icon={<FolderIcon size={12} className="text-text-900" />}
+          title={documentSet}
+          onRemove={() => {
+            filterManager.setSelectedDocumentSets(
+              filterManager.selectedDocumentSets.filter(
+                (ds) => ds !== documentSet
+              )
+            );
+          }}
+          includeTooltip
+          includeAnimation
+        />
+      );
+    }
   );
+
+  const selectedDatasetsIcons = filterManager.selectedDatasets.map(
+    (dataset) => {
+      console.log("Rendering dataset chip:", dataset);
+      return (
+        <SourceChip2
+          key={dataset}
+          icon={<FiDatabase size={12} className="text-text-900" />}
+          title={dataset}
+          onRemove={() => {
+            filterManager.setSelectedDatasets(
+              filterManager.selectedDatasets.filter(
+                (ds) => ds !== dataset
+              )
+            );
+          }}
+          includeTooltip
+          includeAnimation
+        />
+      );
+    }
+  );
+
+  // are there any active filters?
+  const activeFilters =
+    filterManager.timeRange !== null ||
+    filterManager.selectedSources.length > 0 ||
+    filterManager.selectedDocumentSets.length > 0 ||
+    filterManager.selectedTags.length > 0 ||
+    filterManager.selectedDatasets.length > 0;
+    
+  console.log("Active filters?", activeFilters);
+  console.log("Selected datasets:", filterManager.selectedDatasets);
 
   return (
     <div id="onyx-chat-input">
@@ -474,11 +586,12 @@ export function ChatInputBar({
           "
         >
           {/* Dataset mode indicator */}
-          {hasDatasetFiles && (
+          {isDatasetMode && (
             <div className="mb-2 p-2 bg-blue-50 border border-blue-200 rounded-md flex items-center">
-              <FiCode className="text-blue-500 mr-2" />
+              <FiDatabase className="text-blue-500 mr-2" />
               <span className="text-sm text-blue-700">
-                Dataset Mode: RAG is disabled for dataset analysis. Questions will be answered with code examples.
+                Dataset Mode: {hasDatasetFilters ? `Using ${filterManager.selectedDatasets.length} selected datasets` : "Using uploaded dataset files"}. 
+                Questions will be answered with Python code examples.
               </span>
             </div>
           )}
@@ -677,147 +790,137 @@ export function ChatInputBar({
               filterManager.timeRange ||
               filterManager.selectedDocumentSets.length > 0 ||
               filterManager.selectedTags.length > 0 ||
+              filterManager.selectedDatasets.length > 0 ||
               filterManager.selectedSources.length > 0) && (
               <div className="flex bg-input-background gap-x-.5 px-2">
                 <div className="flex gap-x-1 px-2 overflow-visible overflow-x-scroll items-end miniscroll">
-                  {filterManager.selectedTags &&
-                    filterManager.selectedTags.map((tag, index) => (
+                  {selectedSourcesIcons}
+                  {selectedTagsIcons}
+                  {selectedDocumentSetsIcons}
+                  {selectedDatasetsIcons}
+
+                  {/* This is excluding image types because they get rendered differently via currentMessageFiles.map
+                  Seems quite hacky ... all rendering should probably be done in one place? */}
+                  {selectedFiles.map(
+                    (file) =>
+                      !currentMessageFileIds.has(
+                        String(file.file_id || file.id)
+                      ) && (
+                        <SourceChip
+                          key={file.id}
+                          icon={<FileIcon size={16} />}
+                          title={file.name}
+                          onRemove={() => removeSelectedFile(file)}
+                        />
+                      )
+                  )}
+                  {selectedFolders.map((folder) => (
+                    <SourceChip
+                      key={folder.id}
+                      icon={<FolderIcon size={16} />}
+                      title={folder.name}
+                      onRemove={() => removeSelectedFolder(folder)}
+                    />
+                  ))}
+                  {filterManager.timeRange && (
+                    <SourceChip
+                      truncateTitle={false}
+                      key="time-range"
+                      icon={<CalendarIcon size={12} />}
+                      title={`${getFormattedDateRangeString(
+                        filterManager.timeRange.from,
+                        filterManager.timeRange.to
+                      )}`}
+                      onRemove={() => {
+                        filterManager.setTimeRange(null);
+                      }}
+                    />
+                  )}
+                  {filterManager.selectedDocumentSets.length > 0 &&
+                    filterManager.selectedDocumentSets.map((docSet, index) => (
                       <SourceChip
-                        key={index}
-                        icon={<TagIcon size={12} />}
-                        title={`#${tag.tag_key}_${tag.tag_value}`}
+                        key={`doc-set-${index}`}
+                        icon={<DocumentIcon2 size={16} />}
+                        title={docSet}
                         onRemove={() => {
-                          filterManager.setSelectedTags(
-                            filterManager.selectedTags.filter(
-                              (t) => t.tag_key !== tag.tag_key
+                          filterManager.setSelectedDocumentSets(
+                            filterManager.selectedDocumentSets.filter(
+                              (ds) => ds !== docSet
                             )
                           );
                         }}
                       />
                     ))}
-
-                    {/* This is excluding image types because they get rendered differently via currentMessageFiles.map
-                    Seems quite hacky ... all rendering should probably be done in one place? */}
-                    {selectedFiles.map(
-                      (file) =>
-                        !currentMessageFileIds.has(
-                          String(file.file_id || file.id)
-                        ) && (
-                          <SourceChip
-                            key={file.id}
-                            icon={<FileIcon size={16} />}
-                            title={file.name}
-                            onRemove={() => removeSelectedFile(file)}
-                          />
-                        )
-                    )}
-                    {selectedFolders.map((folder) => (
+                  {filterManager.selectedSources.length > 0 &&
+                    filterManager.selectedSources.map((source, index) => (
                       <SourceChip
-                        key={folder.id}
-                        icon={<FolderIcon size={16} />}
-                        title={folder.name}
-                        onRemove={() => removeSelectedFolder(folder)}
+                        key={`source-${index}`}
+                        icon={
+                          <SourceIcon
+                            sourceType={source.internalName}
+                            iconSize={16}
+                          />
+                        }
+                        title={source.displayName}
+                        onRemove={() => {
+                          filterManager.setSelectedSources(
+                            filterManager.selectedSources.filter(
+                              (s) => s.internalName !== source.internalName
+                            )
+                          );
+                        }}
                       />
                     ))}
-                    {filterManager.timeRange && (
+                  {selectedDocuments.length > 0 && (
+                    <SourceChip
+                      key="selected-documents"
+                      onClick={() => {
+                        toggleDocumentSidebar();
+                      }}
+                      icon={<FileIcon size={16} />}
+                      title={`${selectedDocuments.length} selected`}
+                      onRemove={removeDocs}
+                    />
+                  )}
+                  {currentMessageFiles.map((file, index) =>
+                    file.type === ChatFileType.IMAGE ? (
                       <SourceChip
-                        truncateTitle={false}
-                        key="time-range"
-                        icon={<CalendarIcon size={12} />}
-                        title={`${getFormattedDateRangeString(
-                          filterManager.timeRange.from,
-                          filterManager.timeRange.to
-                        )}`}
-                        onRemove={() => {
-                          filterManager.setTimeRange(null);
-                        }}
-                      />
-                    )}
-                    {filterManager.selectedDocumentSets.length > 0 &&
-                      filterManager.selectedDocumentSets.map((docSet, index) => (
-                        <SourceChip
-                          key={`doc-set-${index}`}
-                          icon={<DocumentIcon2 size={16} />}
-                          title={docSet}
-                          onRemove={() => {
-                            filterManager.setSelectedDocumentSets(
-                              filterManager.selectedDocumentSets.filter(
-                                (ds) => ds !== docSet
-                              )
-                            );
-                          }}
-                        />
-                      ))}
-                    {filterManager.selectedSources.length > 0 &&
-                      filterManager.selectedSources.map((source, index) => (
-                        <SourceChip
-                          key={`source-${index}`}
-                          icon={
-                            <SourceIcon
-                              sourceType={source.internalName}
-                              iconSize={16}
+                        key={`file-${index}`}
+                        icon={
+                          file.isUploading ? (
+                            <FiLoader className="animate-spin" />
+                          ) : (
+                            <img
+                              className="h-full py-.5 object-cover rounded-lg bg-background cursor-pointer"
+                              src={buildImgUrl(file.id)}
+                              alt={file.name || "Uploaded image"}
                             />
-                          }
-                          title={source.displayName}
-                          onRemove={() => {
-                            filterManager.setSelectedSources(
-                              filterManager.selectedSources.filter(
-                                (s) => s.internalName !== source.internalName
-                              )
-                            );
-                          }}
-                        />
-                      ))}
-                    {selectedDocuments.length > 0 && (
-                      <SourceChip
-                        key="selected-documents"
-                        onClick={() => {
-                          toggleDocumentSidebar();
-                        }}
-                        icon={<FileIcon size={16} />}
-                        title={`${selectedDocuments.length} selected`}
-                        onRemove={removeDocs}
-                      />
-                    )}
-                    {currentMessageFiles.map((file, index) =>
-                      file.type === ChatFileType.IMAGE ? (
-                        <SourceChip
-                          key={`file-${index}`}
-                          icon={
-                            file.isUploading ? (
-                              <FiLoader className="animate-spin" />
-                            ) : (
-                              <img
-                                className="h-full py-.5 object-cover rounded-lg bg-background cursor-pointer"
-                                src={buildImgUrl(file.id)}
-                                alt={file.name || "Uploaded image"}
-                              />
+                          )
+                        }
+                        title={file.name || "File" + file.id}
+                        onRemove={() => {
+                          setCurrentMessageFiles(
+                            currentMessageFiles.filter(
+                              (fileInFilter) => fileInFilter.id !== file.id
                             )
-                          }
-                          title={file.name || "File" + file.id}
-                          onRemove={() => {
-                            setCurrentMessageFiles(
-                              currentMessageFiles.filter(
-                                (fileInFilter) => fileInFilter.id !== file.id
-                              )
-                            );
-                          }}
-                        />
-                      ) : (
-                        <SourceChip
-                          key={`file-${index}`}
-                          icon={<FileIcon className="text-red-500" size={16} />}
-                          title={file.name || "File"}
-                          onRemove={() => {
-                            setCurrentMessageFiles(
-                              currentMessageFiles.filter(
-                                (fileInFilter) => fileInFilter.id !== file.id
-                              )
-                            );
-                          }}
-                        />
-                      )
-                    )}
+                          );
+                        }}
+                      />
+                    ) : (
+                      <SourceChip
+                        key={`file-${index}`}
+                        icon={<FileIcon className="text-red-500" size={16} />}
+                        title={file.name || "File"}
+                        onRemove={() => {
+                          setCurrentMessageFiles(
+                            currentMessageFiles.filter(
+                              (fileInFilter) => fileInFilter.id !== file.id
+                            )
+                          );
+                        }}
+                      />
+                    )
+                  )}
                 </div>
               </div>
             )}
@@ -875,21 +978,14 @@ export function ChatInputBar({
                 {retrievalEnabled && (
                   <FilterPopup
                     availableSources={availableSources}
-                    availableDocumentSets={
-                      selectedAssistant.document_sets &&
-                      selectedAssistant.document_sets.length > 0
-                        ? selectedAssistant.document_sets
-                        : availableDocumentSets
-                    }
+                    availableDocumentSets={availableDocumentSets}
+                    availableDatasets={availableDatasets}
                     availableTags={availableTags}
                     filterManager={filterManager}
                     trigger={
-                      <ChatInputOption
-                        flexPriority="stiff"
-                        name="Filters"
-                        Icon={FiFilter}
-                        toggle
-                        tooltipContent="Filter your search"
+                      <FilterButton
+                        filtersApplied={activeFilters}
+                        hasSearchTerm={message !== ""}
                       />
                     }
                   />
@@ -904,25 +1000,32 @@ export function ChatInputBar({
                 )}
                 <button
                   id="onyx-chat-input-send-button"
-                  className={`cursor-pointer ${
-                    chatState == "streaming" ||
-                    chatState == "toolBuilding" ||
-                    chatState == "loading"
-                      ? chatState != "streaming"
-                        ? "bg-neutral-500 dark:bg-neutral-400 "
-                        : "bg-neutral-900 dark:bg-neutral-50"
-                      : "bg-red-200"
-                  } h-[22px] w-[22px] rounded-full`}
+                  className={`
+                    btn-gradient
+                    h-9
+                    w-9
+                    rounded-full
+                    flex
+                    flex-row
+                    place-content-center
+                    ${chatState == "streaming" || chatState == "loading" ? "opacity-100" : ""}
+                    ${chatState == "input" && !message ? "opacity-50 hover:opacity-80" : ""}
+                  `}
+                  disabled={chatState == "input" && !message}
+                  title={
+                    chatState == "streaming" || chatState == "loading"
+                      ? "Stop generating"
+                      : "Send message"
+                  }
                   onClick={() => {
-                    if (chatState == "streaming") {
-                      stopGenerating();
-                    } else if (message) {
+                    if (chatState == "streaming" || chatState == "loading") {
+                      onSubmit();
+                    } else if (chatState == "input" && message) {
                       onSubmit();
                     }
                   }}
                 >
                   {chatState == "streaming" ||
-                  chatState == "toolBuilding" ||
                   chatState == "loading" ? (
                     <StopGeneratingIcon
                       size={8}

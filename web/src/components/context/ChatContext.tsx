@@ -17,6 +17,7 @@ interface ChatContextProps {
   documentSets: DocumentSet[];
   availableDocumentSets: DocumentSet[];
   availableTags: Tag[];
+  availableDatasets: { id: number; name: string }[];
   llmProviders: LLMProviderDescriptor[];
   folders: Folder[];
   openedFolders: Record<string, boolean>;
@@ -123,4 +124,72 @@ export const useChatContext = (): ChatContextProps => {
     throw new Error("useChatContext must be used within a ChatProvider");
   }
   return context;
+};
+
+export const ChatContextProvider = ({
+  children,
+  chatSessions = [],
+  availableSources = [],
+  documentSets = [],
+  tags = [],
+  ccPairs = [],
+  llmProviders = [],
+  folders = [],
+  openedFolders = {},
+  sidebarInitiallyVisible = true,
+  shouldShowWelcomeModal = false,
+  shouldDisplaySourcesIncompleteModal = false,
+  defaultAssistantId,
+  inputPrompts = [],
+  proSearchToggled = false,
+  availableDatasets = [],
+}: {
+  children: React.ReactNode;
+  chatSessions?: ChatSession[];
+  availableSources?: ValidSources[];
+  documentSets?: DocumentSet[];
+  tags?: Tag[];
+  ccPairs?: CCPairBasicInfo[];
+  llmProviders?: LLMProviderDescriptor[];
+  folders?: Folder[];
+  openedFolders?: Record<string, boolean>;
+  sidebarInitiallyVisible?: boolean;
+  shouldShowWelcomeModal?: boolean;
+  shouldDisplaySourcesIncompleteModal?: boolean;
+  defaultAssistantId?: number;
+  inputPrompts?: InputPrompt[];
+  proSearchToggled?: boolean;
+  availableDatasets?: { id: number; name: string }[];
+}) => {
+  // ... rest of the component implementation ...
+
+  return (
+    <ChatContext.Provider
+      value={{
+        chatSessions,
+        availableSources,
+        tags,
+        documentSets,
+        availableDocumentSets: documentSets,
+        availableTags: tags,
+        ccPairs,
+        llmProviders,
+        folders,
+        openedFolders,
+        sidebarInitiallyVisible,
+        shouldShowWelcomeModal,
+        shouldDisplaySourcesIncompleteModal,
+        defaultAssistantId,
+        refreshChatSessions,
+        reorderFolders,
+        refreshFolders,
+        inputPrompts,
+        refreshInputPrompts,
+        proSearchToggled,
+        availableDatasets,
+      }}
+    >
+      {children}
+    </ChatContext.Provider>
+  );
 };

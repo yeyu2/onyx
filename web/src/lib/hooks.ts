@@ -211,6 +211,8 @@ export interface FilterManager {
   setSelectedDocumentSets: React.Dispatch<React.SetStateAction<string[]>>;
   selectedTags: Tag[];
   setSelectedTags: React.Dispatch<React.SetStateAction<Tag[]>>;
+  selectedDatasets: string[];
+  setSelectedDatasets: React.Dispatch<React.SetStateAction<string[]>>;
   getFilterString: () => string;
   buildFiltersFromQueryString: (
     filterString: string,
@@ -221,114 +223,69 @@ export interface FilterManager {
   clearFilters: () => void;
 }
 
-export function useFilters(): FilterManager {
-  const [timeRange, setTimeRange] = useTimeRange();
+export function useFilters({
+  defaultFilters,
+  availableSources,
+  availableDocumentSets,
+  availableTags,
+}: {
+  defaultFilters?: string;
+  availableSources: ValidSources[];
+  availableDocumentSets: string[];
+  availableTags: Tag[];
+}): FilterManager {
+  const [timeRange, setTimeRange] = useState<DateRangePickerValue | null>(null);
   const [selectedSources, setSelectedSources] = useState<SourceMetadata[]>([]);
   const [selectedDocumentSets, setSelectedDocumentSets] = useState<string[]>(
     []
   );
   const [selectedTags, setSelectedTags] = useState<Tag[]>([]);
+  const [selectedDatasets, setSelectedDatasets] = useState<string[]>([]);
 
-  const getFilterString = () => {
-    const params = new URLSearchParams();
-
+  function getFilterString(): string {
+    const parts: string[] = [];
     if (timeRange) {
-      params.set("from", timeRange.from.toISOString());
-      params.set("to", timeRange.to.toISOString());
+      parts.push(
+        `time_range=${timeRange.from.toISOString()}_${timeRange.to.toISOString()}`
+      );
     }
-
     if (selectedSources.length > 0) {
-      const sourcesParam = selectedSources
-        .map((source) => encodeURIComponent(source.internalName))
-        .join(",");
-      params.set("sources", sourcesParam);
+      parts.push(
+        `sources=${selectedSources
+          .map((source) => encodeURIComponent(source.internalName))
+          .join(",")}`
+      );
     }
-
     if (selectedDocumentSets.length > 0) {
-      const docSetsParam = selectedDocumentSets
-        .map((ds) => encodeURIComponent(ds))
-        .join(",");
-      params.set("documentSets", docSetsParam);
+      parts.push(
+        `document_sets=${selectedDocumentSets
+          .map((ds) => encodeURIComponent(ds))
+          .join(",")}`
+      );
     }
-
     if (selectedTags.length > 0) {
-      const tagsParam = selectedTags
-        .map((tag) => encodeURIComponent(tag.tag_value))
-        .join(",");
-      params.set("tags", tagsParam);
-    }
-
-    const queryString = params.toString();
-    return queryString ? `&${queryString}` : "";
-  };
-
-  const clearFilters = () => {
-    setTimeRange(null);
-    setSelectedSources([]);
-    setSelectedDocumentSets([]);
-    setSelectedTags([]);
-  };
-
-  function buildFiltersFromQueryString(
-    filterString: string,
-    availableSources: ValidSources[],
-    availableDocumentSets: string[],
-    availableTags: Tag[]
-  ): void {
-    const params = new URLSearchParams(filterString);
-
-    // Parse the "from" parameter as a DateRangePickerValue
-    let newTimeRange: DateRangePickerValue | null = null;
-    const fromParam = params.get("from");
-    const toParam = params.get("to");
-    if (fromParam && toParam) {
-      const fromDate = new Date(fromParam);
-      const toDate = new Date(toParam);
-      if (!isNaN(fromDate.getTime()) && !isNaN(toDate.getTime())) {
-        newTimeRange = { from: fromDate, to: toDate, selectValue: "" };
-      }
-    }
-
-    // Parse sources
-    const availableSourcesMetadata = availableSources.map(getSourceMetadata);
-    let newSelectedSources: SourceMetadata[] = [];
-    const sourcesParam = params.get("sources");
-    if (sourcesParam) {
-      const sourceNames = sourcesParam.split(",").map(decodeURIComponent);
-      newSelectedSources = availableSourcesMetadata.filter((source) =>
-        sourceNames.includes(source.internalName)
+      parts.push(
+        `tags=${selectedTags
+          .map(
+            (tag) =>
+              `${encodeURIComponent(tag.tag_key)}:${encodeURIComponent(
+                tag.tag_value
+              )}`
+          )
+          .join(",")}`
       );
     }
-
-    // Parse document sets
-    let newSelectedDocSets: string[] = [];
-    const docSetsParam = params.get("documentSets");
-    if (docSetsParam) {
-      const docSetNames = docSetsParam.split(",").map(decodeURIComponent);
-      newSelectedDocSets = availableDocumentSets.filter((ds) =>
-        docSetNames.includes(ds)
+    if (selectedDatasets.length > 0) {
+      parts.push(
+        `datasets=${selectedDatasets
+          .map((ds) => encodeURIComponent(ds))
+          .join(",")}`
       );
     }
-
-    // Parse tags
-    let newSelectedTags: Tag[] = [];
-    const tagsParam = params.get("tags");
-    if (tagsParam) {
-      const tagValues = tagsParam.split(",").map(decodeURIComponent);
-      newSelectedTags = availableTags.filter((tag) =>
-        tagValues.includes(tag.tag_value)
-      );
-    }
-
-    // Update filter manager's values instead of returning
-    setTimeRange(newTimeRange);
-    setSelectedSources(newSelectedSources);
-    setSelectedDocumentSets(newSelectedDocSets);
-    setSelectedTags(newSelectedTags);
+    return parts.join("&");
   }
 
   return {
-    clearFilters,
     timeRange,
     setTimeRange,
     selectedSources,
@@ -337,8 +294,91 @@ export function useFilters(): FilterManager {
     setSelectedDocumentSets,
     selectedTags,
     setSelectedTags,
+    selectedDatasets,
+    setSelectedDatasets,
     getFilterString,
-    buildFiltersFromQueryString,
+    buildFiltersFromQueryString: (
+      filterString: string,
+      availableSources: ValidSources[],
+      availableDocumentSets: string[],
+      availableTags: Tag[]
+    ) => {
+      // Process time range
+      const timeRangeMatch = filterString.match(/time_range=([^&]+)/);
+      if (timeRangeMatch) {
+        const [fromStr, toStr] = timeRangeMatch[1].split("_");
+        try {
+          const from = new Date(fromStr);
+          const to = new Date(toStr);
+          setTimeRange({
+            from,
+            to,
+            selectValue: "",
+          });
+        } catch (e) {
+          console.error("Invalid time range format", e);
+        }
+      }
+
+      // Process sources
+      const sourcesMatch = filterString.match(/sources=([^&]+)/);
+      if (sourcesMatch) {
+        const sourceNames = sourcesMatch[1]
+          .split(",")
+          .map((s) => decodeURIComponent(s));
+        const matchedSources = availableSources.filter((source) =>
+          sourceNames.includes(source)
+        );
+        setSelectedSources(
+          matchedSources.map((sourceName) => ({
+            internalName: sourceName,
+            displayName: sourceName,
+          }))
+        );
+      }
+
+      // Process document sets
+      const documentSetsMatch = filterString.match(/document_sets=([^&]+)/);
+      if (documentSetsMatch) {
+        const documentSetNames = documentSetsMatch[1]
+          .split(",")
+          .map((ds) => decodeURIComponent(ds))
+          .filter((ds) => availableDocumentSets.includes(ds));
+        setSelectedDocumentSets(documentSetNames);
+      }
+
+      // Process tags
+      const tagsMatch = filterString.match(/tags=([^&]+)/);
+      if (tagsMatch) {
+        const tagPairs = tagsMatch[1].split(",").map((pair) => {
+          const [key, value] = pair.split(":").map(decodeURIComponent);
+          return { tag_key: key, tag_value: value };
+        });
+        const matchedTags = availableTags.filter((tag) =>
+          tagPairs.some(
+            (pair) =>
+              pair.tag_key === tag.tag_key && pair.tag_value === tag.tag_value
+          )
+        );
+        setSelectedTags(matchedTags);
+      }
+
+      // Process datasets
+      const datasetsMatch = filterString.match(/datasets=([^&]+)/);
+      if (datasetsMatch) {
+        const datasetNames = datasetsMatch[1]
+          .split(",")
+          .map((ds) => decodeURIComponent(ds));
+        setSelectedDatasets(datasetNames);
+      }
+    },
+    clearFilters: () => {
+      setTimeRange(null);
+      setSelectedSources([]);
+      setSelectedDocumentSets([]);
+      setSelectedTags([]);
+      setSelectedDatasets([]);
+    },
   };
 }
 

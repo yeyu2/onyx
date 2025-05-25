@@ -191,7 +191,9 @@ export interface Filters {
   document_set: string[] | null;
   time_cutoff: Date | null;
   user_file_ids: number[] | null;
+  datasets?: string[] | null;
   // user_folder_ids: number[] | null;
+  tags?: Tag[] | null;
 }
 
 export interface SearchRequestArgs {

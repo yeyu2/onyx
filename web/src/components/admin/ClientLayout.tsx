@@ -21,6 +21,8 @@ import {
   AssistantsIconSkeleton,
   SearchIcon,
   DocumentIcon2,
+  BookmarkIcon,
+  TuningIconSkeleton,
 } from "@/components/icons/icons";
 import { UserRole } from "@/lib/types";
 import { FiActivity, FiBarChart2 } from "react-icons/fi";
@@ -80,6 +82,15 @@ const collections = (
           </div>
         ),
         link: "/admin/documents/sets",
+      },
+      {
+        name: (
+          <div className="flex">
+            <DatabaseIconSkeleton className="text-text-700" size={18} />
+            <div className="ml-1">Datasets</div>
+          </div>
+        ),
+        link: "/admin/documents/datasets",
       },
       {
         name: (

@@ -11,6 +11,7 @@ import {
   FiChevronRight,
   FiDatabase,
   FiBook,
+  FiGrid,
 } from "react-icons/fi";
 import { FilterManager } from "@/lib/hooks";
 import { DocumentSet, Tag } from "@/lib/types";
@@ -27,6 +28,7 @@ interface FilterPopupProps {
   trigger: React.ReactNode;
   availableSources: SourceMetadata[];
   availableDocumentSets: DocumentSet[];
+  availableDatasets?: { id: number; name: string }[];
   availableTags: Tag[];
 }
 
@@ -34,24 +36,32 @@ export enum FilterCategories {
   date = "date",
   sources = "sources",
   documentSets = "documentSets",
+  datasets = "datasets",
   tags = "tags",
 }
 
 export function FilterPopup({
   availableSources,
   availableDocumentSets,
+  availableDatasets = [],
   availableTags,
   filterManager,
   trigger,
 }: FilterPopupProps) {
+  console.log("FilterPopup received datasets:", availableDatasets);
+  
   const [selectedFilter, setSelectedFilter] = useState<FilterCategories>(
     FilterCategories.date
   );
   const [currentDate, setCurrentDate] = useState(new Date());
   const [documentSetSearch, setDocumentSetSearch] = useState("");
+  const [datasetSearch, setDatasetSearch] = useState("");
   const [filteredDocumentSets, setFilteredDocumentSets] = useState<
     DocumentSet[]
   >(availableDocumentSets);
+  const [filteredDatasets, setFilteredDatasets] = useState<
+    { id: number; name: string }[]
+  >(availableDatasets || []);
 
   useEffect(() => {
     const lowercasedFilter = documentSetSearch.toLowerCase();
@@ -60,6 +70,15 @@ export function FilterPopup({
     );
     setFilteredDocumentSets(filtered);
   }, [documentSetSearch, availableDocumentSets]);
+
+  useEffect(() => {
+    const lowercasedFilter = datasetSearch.toLowerCase();
+    const filtered = (availableDatasets || []).filter((dataset) =>
+      dataset.name.toLowerCase().includes(lowercasedFilter)
+    );
+    console.log("Filtered datasets:", filtered);
+    setFilteredDatasets(filtered);
+  }, [datasetSearch, availableDatasets]);
 
   const FilterOption = ({
     category,
@@ -249,6 +268,22 @@ export function FilterPopup({
     );
   };
 
+  const isDatasetSelected = (dataset: { id: number; name: string }) => {
+    const isSelected = filterManager.selectedDatasets.includes(dataset.name);
+    console.log(`Dataset ${dataset.name} isSelected: ${isSelected}`);
+    return isSelected;
+  };
+
+  const toggleDataset = (dataset: { id: number; name: string }) => {
+    console.log("Toggling dataset:", dataset.name, "Current datasets:", filterManager.selectedDatasets);
+    filterManager.setSelectedDatasets((prev) =>
+      prev.includes(dataset.name)
+        ? prev.filter((name) => name !== dataset.name)
+        : [...prev, dataset.name]
+    );
+    console.log("After toggle, selectedDatasets:", filterManager.selectedDatasets);
+  };
+
   return (
     <Popover>
       <PopoverTrigger asChild>
@@ -280,6 +315,11 @@ export function FilterPopup({
                   label="Sets"
                 />
               )}
+              <FilterOption
+                category={FilterCategories.datasets}
+                icon={<FiGrid className="w-4 h-4" />}
+                label="Datasets"
+              />
               {availableTags.length > 0 && (
                 <FilterOption
                   category={FilterCategories.tags}
@@ -374,6 +414,28 @@ export function FilterPopup({
                 </div>
               </div>
             )}
+            {selectedFilter === FilterCategories.datasets && (
+              <div className="pt-4 h-full flex flex-col w-full">
+                <div className="flex pb-2 px-4">
+                  <Input
+                    placeholder="Search datasets..."
+                    value={datasetSearch}
+                    onChange={(e) => setDatasetSearch(e.target.value)}
+                    className="border border-text-subtle w-full"
+                  />
+                </div>
+                <div className="space-y-1 border-t pt-2 border-t-text-subtle px-4 default-scrollbar w-full max-h-64 overflow-y-auto">
+                  {filteredDatasets.map((dataset) => (
+                    <SelectableDropdown
+                      key={dataset.id}
+                      value={dataset.name}
+                      selected={isDatasetSelected(dataset)}
+                      toggle={() => toggleDataset(dataset)}
+                    />
+                  ))}
+                </div>
+              </div>
+            )}
             {selectedFilter === FilterCategories.tags && (
               <TagFilter
                 tags={availableTags}
@@ -393,6 +455,7 @@ export function FilterPopup({
               filterManager.setSelectedSources([]);
               filterManager.setSelectedDocumentSets([]);
               filterManager.setSelectedTags([]);
+              filterManager.setSelectedDatasets([]);
             }}
             className="text-xs"
           >
@@ -407,6 +470,11 @@ export function FilterPopup({
             {filterManager.selectedDocumentSets.length > 0 && (
               <span className="bg-background-100 dark:bg-neutral-800 px-1.5 py-0.5 rounded-full">
                 {filterManager.selectedDocumentSets.length} sets
+              </span>
+            )}
+            {filterManager.selectedDatasets.length > 0 && (
+              <span className="bg-background-100 dark:bg-neutral-800 px-1.5 py-0.5 rounded-full">
+                {filterManager.selectedDatasets.length} datasets
               </span>
             )}
             {filterManager.selectedTags.length > 0 && (

@@ -502,6 +502,11 @@ class ConnectorCredentialPair(Base):
         back_populates="connector_credential_pairs",
         overlaps="document_set",
     )
+    datasets: Mapped[list["Dataset"]] = relationship(
+        "Dataset",
+        secondary="dataset__connector_credential_pair",
+        back_populates="connector_credential_pairs",
+    )
     index_attempts: Mapped[list["IndexAttempt"]] = relationship(
         "IndexAttempt", back_populates="connector_credential_pair"
     )
@@ -2536,4 +2541,73 @@ class TenantAnonymousUserPath(Base):
     tenant_id: Mapped[str] = mapped_column(String, primary_key=True, nullable=False)
     anonymous_user_path: Mapped[str] = mapped_column(
         String, nullable=False, unique=True
+    )
+
+
+# Dataset Models
+class Dataset(Base):
+    __tablename__ = "dataset"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    name: Mapped[str] = mapped_column(String, unique=True)
+    description: Mapped[str | None] = mapped_column(String)
+    created_by: Mapped[UUID | None] = mapped_column(
+        ForeignKey("user.id", ondelete="SET NULL"), nullable=True
+    )
+    created_at: Mapped[datetime.datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now()
+    )
+    is_public: Mapped[bool] = mapped_column(Boolean, nullable=False, default=True)
+
+    connector_credential_pairs: Mapped[list[ConnectorCredentialPair]] = relationship(
+        "ConnectorCredentialPair",
+        secondary="dataset__connector_credential_pair",
+        back_populates="datasets",
+    )
+    
+    # Users with access to this dataset
+    users: Mapped[list[User]] = relationship(
+        "User",
+        secondary="dataset__user",
+        viewonly=True,
+    )
+    
+    # Groups with access to this dataset (EE only)
+    groups: Mapped[list["UserGroup"]] = relationship(
+        "UserGroup",
+        secondary="dataset__user_group",
+        viewonly=True,
+    )
+
+
+class Dataset__User(Base):
+    __tablename__ = "dataset__user"
+
+    dataset_id: Mapped[int] = mapped_column(
+        ForeignKey("dataset.id", ondelete="CASCADE"), primary_key=True
+    )
+    user_id: Mapped[UUID] = mapped_column(
+        ForeignKey("user.id", ondelete="CASCADE"), primary_key=True
+    )
+
+
+class Dataset__UserGroup(Base):
+    __tablename__ = "dataset__user_group"
+
+    dataset_id: Mapped[int] = mapped_column(
+        ForeignKey("dataset.id", ondelete="CASCADE"), primary_key=True
+    )
+    user_group_id: Mapped[int] = mapped_column(
+        ForeignKey("user_group.id", ondelete="CASCADE"), primary_key=True
+    )
+
+
+class Dataset__ConnectorCredentialPair(Base):
+    __tablename__ = "dataset__connector_credential_pair"
+
+    dataset_id: Mapped[int] = mapped_column(
+        ForeignKey("dataset.id", ondelete="CASCADE"), primary_key=True
+    )
+    connector_credential_pair_id: Mapped[int] = mapped_column(
+        ForeignKey("connector_credential_pair.id", ondelete="CASCADE"), primary_key=True
     )
