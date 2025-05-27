@@ -34,10 +34,10 @@ interface FilterPopupProps {
 
 export enum FilterCategories {
   date = "date",
-  sources = "sources",
-  documentSets = "documentSets",
-  datasets = "datasets",
-  tags = "tags",
+  source = "source",
+  documentSet = "document_set",
+  tag = "tag",
+  dataset = "dataset",
 }
 
 export function FilterPopup({
@@ -48,8 +48,6 @@ export function FilterPopup({
   filterManager,
   trigger,
 }: FilterPopupProps) {
-  console.log("FilterPopup received datasets:", availableDatasets);
-  
   const [selectedFilter, setSelectedFilter] = useState<FilterCategories>(
     FilterCategories.date
   );
@@ -76,7 +74,6 @@ export function FilterPopup({
     const filtered = (availableDatasets || []).filter((dataset) =>
       dataset.name.toLowerCase().includes(lowercasedFilter)
     );
-    console.log("Filtered datasets:", filtered);
     setFilteredDatasets(filtered);
   }, [datasetSearch, availableDatasets]);
 
@@ -270,18 +267,15 @@ export function FilterPopup({
 
   const isDatasetSelected = (dataset: { id: number; name: string }) => {
     const isSelected = filterManager.selectedDatasets.includes(dataset.name);
-    console.log(`Dataset ${dataset.name} isSelected: ${isSelected}`);
     return isSelected;
   };
 
   const toggleDataset = (dataset: { id: number; name: string }) => {
-    console.log("Toggling dataset:", dataset.name, "Current datasets:", filterManager.selectedDatasets);
     filterManager.setSelectedDatasets((prev) =>
       prev.includes(dataset.name)
         ? prev.filter((name) => name !== dataset.name)
         : [...prev, dataset.name]
     );
-    console.log("After toggle, selectedDatasets:", filterManager.selectedDatasets);
   };
 
   return (
@@ -303,26 +297,26 @@ export function FilterPopup({
               />
               {availableSources.length > 0 && (
                 <FilterOption
-                  category={FilterCategories.sources}
+                  category={FilterCategories.source}
                   icon={<FiDatabase className="w-4 h-4" />}
                   label="Sources"
                 />
               )}
               {availableDocumentSets.length > 0 && (
                 <FilterOption
-                  category={FilterCategories.documentSets}
+                  category={FilterCategories.documentSet}
                   icon={<FiBook className="w-4 h-4" />}
                   label="Sets"
                 />
               )}
               <FilterOption
-                category={FilterCategories.datasets}
+                category={FilterCategories.dataset}
                 icon={<FiGrid className="w-4 h-4" />}
                 label="Datasets"
               />
               {availableTags.length > 0 && (
                 <FilterOption
-                  category={FilterCategories.tags}
+                  category={FilterCategories.tag}
                   icon={<FiTag className="w-4 h-4" />}
                   label="Tags"
                 />
@@ -357,7 +351,7 @@ export function FilterPopup({
                 )}
               </div>
             )}
-            {selectedFilter === FilterCategories.sources && (
+            {selectedFilter === FilterCategories.source && (
               <div className="p-4">
                 <div className="flex items-center justify-between mb-2">
                   <h3 className="text-sm font-semibold">Sources</h3>
@@ -392,7 +386,7 @@ export function FilterPopup({
                 </ul>
               </div>
             )}
-            {selectedFilter === FilterCategories.documentSets && (
+            {selectedFilter === FilterCategories.documentSet && (
               <div className="pt-4 h-full flex flex-col w-full">
                 <div className="flex pb-2 px-4">
                   <Input
@@ -414,7 +408,7 @@ export function FilterPopup({
                 </div>
               </div>
             )}
-            {selectedFilter === FilterCategories.datasets && (
+            {selectedFilter === FilterCategories.dataset && (
               <div className="pt-4 h-full flex flex-col w-full">
                 <div className="flex pb-2 px-4">
                   <Input
@@ -436,7 +430,7 @@ export function FilterPopup({
                 </div>
               </div>
             )}
-            {selectedFilter === FilterCategories.tags && (
+            {selectedFilter === FilterCategories.tag && (
               <TagFilter
                 tags={availableTags}
                 selectedTags={filterManager.selectedTags}

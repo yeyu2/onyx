@@ -102,10 +102,15 @@ from onyx.utils.headers import get_custom_tool_additional_request_headers
 from onyx.utils.logger import setup_logger
 from onyx.utils.telemetry import create_milestone_and_report
 from shared_configs.contextvars import get_current_tenant_id
+# Import our direct print module for reliable logging
+from onyx.server.features.code_interpreter.direct_print import direct_print, debug, info, warning, error, critical
 
 RECENT_DOCS_FOLDER_ID = -1
 
+# Set up both logging methods
 logger = setup_logger()
+direct_print("=== CHAT BACKEND MODULE LOADED ===")
+logger.info("Chat backend module initialized")
 
 router = APIRouter(prefix="/chat")
 
@@ -418,14 +423,41 @@ def handle_new_chat_message(
     Returns:
         StreamingResponse: Streams the response to the new chat message.
     """
+    # Using both logging systems for maximum visibility
     tenant_id = get_current_tenant_id()
-    logger.debug(f"Received new chat message: {chat_message_req.message}")
+    
+    # Standard logger
+    logger.debug("=== DEBUG: SEND-MESSAGE START ===")
+    logger.info("=== INFO: Processing new chat message ===")
+    logger.notice("=== NOTICE: Chat message received ===")
+    logger.warning("=== WARNING: Testing log levels ===")
+    logger.error("=== ERROR: This is a test error log ===")
+    
+    # Direct print for guaranteed visibility
+    direct_print("="*50)
+    direct_print("DIRECT PRINT: SEND-MESSAGE ENDPOINT CALLED")
+    debug("Debug message from send-message handler")
+    info("Processing new chat message (direct_print)")
+    warning("This is a direct print warning test")
+    error("This is a direct print error test")
+    
+    username = user.email if user else "Anonymous"
+    direct_print(f"User: {username}, Tenant: {tenant_id}")
+    direct_print(f"Message content: {chat_message_req.message}")
+    direct_print(f"Headers: {request.headers.get('content-type')}")
+    
+    # Detailed info with standard logger too
+    logger.info(f"User: {username}, Tenant: {tenant_id}")
+    logger.info(f"Message content: {chat_message_req.message}")
+    logger.info(f"Headers: {request.headers.get('content-type')}")
 
     if (
         not chat_message_req.message
         and chat_message_req.prompt_id is not None
         and not chat_message_req.use_existing_user_message
     ):
+        logger.error("Empty chat message error triggered")
+        error("DIRECT: Empty chat message error triggered")
         raise HTTPException(status_code=400, detail="Empty chat message is invalid")
 
     with get_session_with_tenant(tenant_id=tenant_id) as db_session:
@@ -438,6 +470,9 @@ def handle_new_chat_message(
         )
 
     def stream_generator() -> Generator[str, None, None]:
+        direct_print("Starting stream generation for chat message")
+        packet_count = 0
+        
         try:
             for packet in stream_chat_message(
                 new_msg_req=chat_message_req,
@@ -450,14 +485,22 @@ def handle_new_chat_message(
                 ),
                 is_connected=is_connected_func,
             ):
+                packet_count += 1
+                # Log every 10th packet to avoid excessive logging
+                if packet_count % 10 == 0:
+                    direct_print(f"Streaming packet #{packet_count}")
                 yield packet
 
         except Exception as e:
-            logger.exception("Error in chat message streaming")
+            error_msg = f"Error in chat message streaming: {str(e)}"
+            logger.exception(error_msg)
+            error(error_msg)
             yield json.dumps({"error": str(e)})
 
         finally:
-            logger.debug("Stream generator finished")
+            final_msg = f"Stream generator finished. Total packets: {packet_count}"
+            logger.debug(final_msg)
+            direct_print(final_msg)
 
     return StreamingResponse(stream_generator(), media_type="text/event-stream")
 

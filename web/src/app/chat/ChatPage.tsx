@@ -1446,61 +1446,23 @@ export function ChatPage({
       // Flag to determine if this is a dataset query (suppress RAG)
       const isDatasetQuery = datasetFiles.length > 0 || filterManager.selectedDatasets.length > 0;
       
-      // Create dataset instructions for the code interpreter if there are dataset files
-      let datasetInstructions = "";
-      
       // Check if there are selected datasets from the filter
       const hasSelectedDatasets = filterManager.selectedDatasets.length > 0;
       
-      if (datasetFiles.length > 0 || hasSelectedDatasets) {
-        datasetInstructions = "IMPORTANT: The user has dataset files or filtered for specific datasets for analysis. When asked about these datasets:\n";
-        datasetInstructions += "1. DO NOT use RAG or retrieved content to answer questions about these datasets.\n";
-        datasetInstructions += "2. ONLY generate Python code that could analyze the data without executing it.\n";
-        datasetInstructions += "3. Explain what the code would do if executed, but do not claim to have actual results.\n\n";
-        
-        // Add information about selected datasets from filters
-        if (hasSelectedDatasets) {
-          datasetInstructions += "Selected datasets:\n";
-          filterManager.selectedDatasets.forEach(datasetName => {
-            datasetInstructions += `- ${datasetName} (available at: /datasets/${datasetName})\n`;
-          });
-          datasetInstructions += "\n";
-        }
-        
-        // Add information about uploaded dataset files
-        if (datasetFiles.length > 0) {
-          datasetInstructions += "The following dataset files are available:\n";
-          datasetFiles.forEach(file => {
-            const meta = file.metadata || { path: `/datasets/${file.name}` };
-            const fileType = 'fileType' in meta ? meta.fileType : 'unknown type';
-            const fileSize = 'fileSize' in meta ? `${(meta.fileSize / 1024).toFixed(2)}KB` : 'unknown size';
-            datasetInstructions += `- ${file.name} (${fileType}, ${fileSize})\n`;
-            datasetInstructions += `  Available at: ${meta.path}\n`;
-          });
-        }
-        
-        datasetInstructions += "\nWhen analyzing these datasets, use code like:\n```python\nimport pandas as pd\nimport matplotlib.pyplot as plt\nimport numpy as np\n\n";
-        
-        // Add specific dataset loading examples based on available datasets
-        if (hasSelectedDatasets) {
-          datasetInstructions += "# Example for loading these datasets:\n";
-          filterManager.selectedDatasets.forEach(datasetName => {
-            const fileExt = datasetName.split('.').pop()?.toLowerCase();
-            if (fileExt === 'csv') {
-              datasetInstructions += `df_${datasetName.replace(/\.\w+$/, '').replace(/\W+/g, '_')} = pd.read_csv('/datasets/${datasetName}')\n`;
-            } else if (fileExt === 'xlsx' || fileExt === 'xls') {
-              datasetInstructions += `df_${datasetName.replace(/\.\w+$/, '').replace(/\W+/g, '_')} = pd.read_excel('/datasets/${datasetName}')\n`;
-            } else if (fileExt === 'json') {
-              datasetInstructions += `df_${datasetName.replace(/\.\w+$/, '').replace(/\W+/g, '_')} = pd.json_normalize(pd.read_json('/datasets/${datasetName}'))\n`;
-            } else {
-              datasetInstructions += `# For '${datasetName}', determine the appropriate method to load based on file type\n`;
-            }
-          });
-        } else {
-          datasetInstructions += "# Example for loading a CSV file\ndf = pd.read_csv('/datasets/filename.csv')\n# Or for Excel\n# df = pd.read_excel('/datasets/filename.xlsx')\n# Or for JSON\n# df = pd.json_normalize(pd.read_json('/datasets/filename.json'))\n";
-        }
-        
-        datasetInstructions += "\n# Now analyze the data...\n```";
+      // Log dataset information for debugging
+      console.log("Dataset Query Information:", {
+        isDatasetQuery,
+        hasSelectedDatasets,
+        selectedDatasets: filterManager.selectedDatasets,
+        datasetFilesCount: datasetFiles.length
+      });
+      
+      // Simplified dataset indicator - we no longer generate extensive instructions here
+      // as the backend will handle this based on the dataset_names parameter
+      let datasetInstructions = "";
+      if (isDatasetQuery) {
+        // Just add a minimal indicator that this is a dataset query
+        datasetInstructions = "DATASET_MODE: The backend will handle dataset instructions generation.";
       }
 
       await updateCurrentMessageFIFO(stack, {
@@ -1544,9 +1506,8 @@ export function ChatPage({
         temperature: llmManager.temperature || undefined,
         systemPromptOverride:
           datasetInstructions ? 
-          (searchParams?.get(SEARCH_PARAM_NAMES.SYSTEM_PROMPT) || "") + "\n\n" + 
-          (filterManager.selectedDatasets.length > 0 ? `Using datasets: ${filterManager.selectedDatasets.map(name => `${name} (/datasets/${name})`).join(", ")}\n` : "") + 
-          datasetInstructions : 
+          (searchParams?.get(SEARCH_PARAM_NAMES.SYSTEM_PROMPT) || "") + 
+          (isDatasetQuery ? "\n\n" + datasetInstructions : "") : 
           searchParams?.get(SEARCH_PARAM_NAMES.SYSTEM_PROMPT) || undefined,
         useExistingUserMessage: isSeededChat,
         useLanggraph:
@@ -1554,7 +1515,7 @@ export function ChatPage({
           settings?.settings.pro_search_enabled &&
           proSearchEnabled &&
           retrievalEnabled,
-        // disableRetrieval: isDatasetQuery, // Disable retrieval for dataset queries
+        dataset_names: isDatasetQuery ? filterManager.selectedDatasets : [], // Ensure dataset names are passed in dataset queries
       });
 
       const delay = (ms: number) => {

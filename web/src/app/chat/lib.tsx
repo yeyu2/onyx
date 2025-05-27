@@ -181,6 +181,7 @@ export interface SendMessageParams {
   userFolderIds?: number[];
   forceUserFileSearch?: boolean;
   useLanggraph?: boolean;
+  dataset_names?: string[];
 }
 
 export async function* sendMessage({
@@ -204,32 +205,70 @@ export async function* sendMessage({
   signal,
   forceUserFileSearch,
   useLanggraph,
+  dataset_names,
 }: SendMessageParams): AsyncGenerator<PacketType, void, unknown> {
   const documentsAreSelected =
-    selectedDocumentIds && selectedDocumentIds.length > 0;
+    selectedDocumentIds !== null && selectedDocumentIds.length > 0;
+
+  // Log the request content for debugging
+  console.log('=== Chat Message Request Debug ===');
+  console.log('Message:', message);
+  console.log('Chat Session ID:', chatSessionId);
+  console.log('Parent Message ID:', parentMessageId);
+  console.log('File Descriptors:', fileDescriptors);
+  console.log('Selected Document IDs:', selectedDocumentIds);
+  console.log('Filters:', filters);
+  console.log('Query Override:', queryOverride);
+  console.log('Model Provider:', modelProvider);
+  console.log('Model Version:', modelVersion);
+  console.log('Temperature:', temperature);
+  console.log('System Prompt Override:', systemPromptOverride);
+  console.log('Use Existing User Message:', useExistingUserMessage);
+  console.log('Alternate Assistant ID:', alternateAssistantId);
+  console.log('Use Langgraph:', useLanggraph);
+  console.log('Dataset Names:', dataset_names);
+  console.log('================================');
+
+  // Determine dataset names to use, prioritizing the passed dataset_names parameter
+  let datasetNames: string[] = [];
+  
+  // If dataset_names is provided, use it directly
+  if (dataset_names && dataset_names.length > 0) {
+    datasetNames = dataset_names;
+    console.log('Using provided dataset names:', datasetNames);
+  }
+  // Otherwise fall back to extracting from system prompt if available
+  else if (systemPromptOverride) {
+    const matches = systemPromptOverride.match(/Using datasets: (.*?)(?:\n|$)/);
+    if (matches && matches[1]) {
+      const datasetLine = matches[1];
+      datasetNames = datasetLine
+        .split(',')
+        .map(name => name.trim().split(' ')[0])
+        .filter((name): name is string => name !== undefined && name !== '');
+      console.log('Extracted dataset names from system prompt:', datasetNames);
+    }
+  }
+
   const body = JSON.stringify({
-    alternate_assistant_id: alternateAssistantId,
     chat_session_id: chatSessionId,
     parent_message_id: parentMessageId,
     message: message,
-    // just use the default prompt for the assistant.
-    // should remove this in the future, as we don't support multiple prompts for a
-    // single assistant anyways
-    prompt_id: null,
-    search_doc_ids: documentsAreSelected ? selectedDocumentIds : null,
-    force_user_file_search: forceUserFileSearch,
     file_descriptors: fileDescriptors,
-    user_file_ids: userFileIds,
-    user_folder_ids: userFolderIds,
-    regenerate,
-    retrieval_options: !documentsAreSelected
+    prompt_id: null,
+    search_doc_ids: selectedDocumentIds,
+    retrieval_options: filters
       ? {
-          run_search: queryOverride || forceSearch ? "always" : "auto",
+          run_search: forceSearch ? "always" : "auto",
           real_time: true,
           filters: filters,
+          user_file_ids: userFileIds,
+          user_folder_ids: userFolderIds,
+          force_user_file_search: forceUserFileSearch,
         }
       : null,
     query_override: queryOverride,
+    regenerate: regenerate,
     prompt_override: systemPromptOverride
       ? {
           system_prompt: systemPromptOverride,
@@ -245,7 +284,11 @@ export async function* sendMessage({
         : null,
     use_existing_user_message: useExistingUserMessage,
     use_agentic_search: useLanggraph ?? false,
+    dataset_names: datasetNames,
   });
+
+  // Log the final request body
+  console.log('Request Body:', JSON.parse(body));
 
   const response = await fetch(`/api/chat/send-message`, {
     method: "POST",

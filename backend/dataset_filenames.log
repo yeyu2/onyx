@@ -1,0 +1,90 @@
+
+====================================================================================================
+DATASET FILENAMES - CRITICAL INFORMATION
+====================================================================================================
+Dataset Names: ['dataset1']
+Available Filenames: []
+
+MAPPED FILENAMES (from hardcoded mapping):
+Dataset 'dataset1' should use filename: 'MOCK_DATA.csv'
+Access path: /datasets/MOCK_DATA.csv
+
+CODE EXAMPLE:
+```python
+import pandas as pd
+
+# Load data from dataset1
+df_dataset1 = pd.read_csv('/datasets/MOCK_DATA.csv')
+print(df_dataset1.head())
+```
+====================================================================================================
+
+
+================================================================================
+DATASET FILENAMES - CRITICAL INFORMATION
+================================================================================
+Dataset Names: ['dataset1']
+Actual Filenames: []
+================================================================================
+
+
+
+================================================================================
+DATASET FILENAMES - CRITICAL INFORMATION
+================================================================================
+Dataset Names: ['dataset1']
+Actual Filenames: []
+================================================================================
+
+
+
+================================================================================
+DATASET FILENAMES - CRITICAL INFORMATION
+================================================================================
+Dataset Names: ['dataset1']
+Actual Filenames: ['dataset1.csv']
+
+DATASET TO FILENAME MAPPING:
+1. dataset1 → dataset1.csv
+   Example code: df = pd.read_csv('/datasets/dataset1.csv')
+================================================================================
+
+
+
+================================================================================
+DATASET FILENAMES - CRITICAL INFORMATION
+================================================================================
+Dataset Names: ['dataset1']
+Actual Filenames: ['dataset1.csv']
+
+DATASET TO FILENAME MAPPING:
+1. dataset1 → dataset1.csv
+   Example code: df = pd.read_csv('/datasets/dataset1.csv')
+================================================================================
+
+
+
+================================================================================
+DATASET FILENAMES - CRITICAL INFORMATION
+================================================================================
+Dataset Names: ['dataset1']
+Actual Filenames: ['dataset1.csv']
+
+DATASET TO FILENAME MAPPING:
+1. dataset1 → dataset1.csv
+   Example code: df = pd.read_csv('/datasets/dataset1.csv')
+================================================================================
+
+
+
+================================================================================
+DATASET FILENAMES - CRITICAL INFORMATION
+================================================================================
+Dataset Names: ['dataset1']
+Actual Filenames: ['dataset1.csv']
+
+DATASET TO FILENAME MAPPING:
+1. dataset1 → dataset1.csv
+   Example code: df = pd.read_csv('/datasets/dataset1.csv')
+================================================================================
+

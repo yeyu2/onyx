@@ -7,6 +7,7 @@ from collections.abc import Iterator
 from typing import cast
 from typing import Protocol
 from uuid import UUID
+import os
 
 from sqlalchemy.orm import Session
 
@@ -652,6 +653,45 @@ def stream_chat_message_objects(
     3. [always] A set of streamed LLM tokens or an error anywhere along the line if something fails
     4. [always] Details on the final AI response message that is created
     """
+    # DIRECT CSV DETECTION - Check if any of the file descriptors are CSV files
+    has_csv_files = False
+    uploaded_csv_files = []  # List to track uploaded CSV files for later use
+    
+    for file_desc in new_msg_req.file_descriptors:
+        if file_desc.get("type") == "csv" or (file_desc.get("name", "").lower().endswith(".csv")):
+            has_csv_files = True
+            # Use the actual filename for dataset_names, stripping any path
+            csv_filename = file_desc.get("name", "")
+            if "/" in csv_filename:
+                csv_filename = csv_filename.split("/")[-1]
+            
+            # Force dataset mode for CSV files
+            if not new_msg_req.dataset_names:
+                new_msg_req.dataset_names = [csv_filename.replace(".csv", "")]
+            
+            # Also add a dataset mode marker to the system prompt if it doesn't exist
+            if new_msg_req.prompt_override and new_msg_req.prompt_override.system_prompt:
+                if "DATASET_MODE:" not in new_msg_req.prompt_override.system_prompt:
+                    new_msg_req.prompt_override.system_prompt = (
+                        "DATASET_MODE: This is a dataset analysis task. ALWAYS use print() statements for ALL outputs.\n\n" 
+                        + new_msg_req.prompt_override.system_prompt
+                    )
+            else:
+                # Create a prompt override with dataset mode
+                new_msg_req.prompt_override = PromptOverride(
+                    system_prompt="DATASET_MODE: This is a dataset analysis task. ALWAYS use print() statements for ALL outputs.\n\n",
+                    task_prompt=None
+                )
+            
+            # Store the CSV file info for later processing
+            uploaded_csv_files.append({
+                "file_desc": file_desc,
+                "filename": csv_filename
+            })
+            
+            print(f"\n\n*** DETECTED CSV FILE: {csv_filename} - FORCING DATASET MODE WITH NAME: {new_msg_req.dataset_names[0]} ***\n\n")
+            break
+            
     tenant_id = get_current_tenant_id()
     use_existing_user_message = new_msg_req.use_existing_user_message
     existing_assistant_message_id = new_msg_req.existing_assistant_message_id
@@ -739,6 +779,172 @@ def stream_chat_message_objects(
             )
         except GenAIDisabledException:
             raise RuntimeError("LLM is disabled. Can't use chat flow without LLM.")
+
+        # Handle dataset preparation for code execution if datasets are specified
+        dataset_instructions = ""
+        
+        # DIRECT DEBUG PRINT - Will show in console no matter what
+        print("\n\n" + "!"*100)
+        print(f"DEBUG - DATASET NAMES: {getattr(new_msg_req, 'dataset_names', 'NOT FOUND')}")
+        print(f"DEBUG - FULL REQUEST: {new_msg_req}")
+        print("!"*100 + "\n\n")
+        
+        # Check for uploaded dataset files in file_descriptors
+        has_dataset_files = False
+        uploaded_dataset_names = []
+        for file_desc in new_msg_req.file_descriptors:
+            if file_desc.get("metadata") and file_desc["metadata"].get("isDataset"):
+                has_dataset_files = True
+                uploaded_dataset_names.append(file_desc.get('name', 'unnamed_dataset'))
+                print(f"Found uploaded dataset file: {file_desc.get('name')}")
+        
+        # If we have uploaded dataset files but no dataset_names, set a fixed name
+        if has_dataset_files and not new_msg_req.dataset_names:
+            # Assign dataset names to ensure prompt generation works correctly
+            new_msg_req.dataset_names = uploaded_dataset_names or ["uploaded_dataset"]
+            print(f"Setting dataset names to: {new_msg_req.dataset_names}")
+        
+        # Import code interpreter modules
+        try:
+            from onyx.server.features.code_interpreter.setup import setup_code_interpreter_environment
+            from onyx.server.features.code_interpreter.dataset_handler import (
+                ensure_sandbox_dirs, 
+                copy_dataset_files_to_sandbox, 
+                format_dataset_instructions,
+                DATASETS_DIR
+            )
+        except Exception as e:
+            print(f"Error importing code interpreter modules: {str(e)}")
+            logger.error(f"Error importing code interpreter modules: {str(e)}")
+            
+        # Check for uploaded dataset files (marked with isDataset metadata in file_descriptors)
+        uploaded_dataset_files = []
+        for file_desc in new_msg_req.file_descriptors:
+            # Check if file has dataset metadata
+            if file_desc.get("metadata") and file_desc["metadata"].get("isDataset"):
+                print(f"Found uploaded dataset file: {file_desc.get('name')}")
+                
+                # Get the file content
+                for file in latest_query_files:
+                    if file.file_id == file_desc["id"]:
+                        print(f"Loading content for dataset file: {file_desc.get('name')}")
+                        
+                        # Create dataset file info structure like what's used for connector datasets
+                        file_name = file_desc.get('name', f"uploaded_file_{file.file_id}")
+                        
+                        # Ensure sandbox directories exist
+                        ensure_sandbox_dirs()
+                        
+                        # Create destination path in sandbox
+                        dest_path = os.path.join(DATASETS_DIR, file_name)
+                        
+                        # Write the file content to the sandbox
+                        try:
+                            with open(dest_path, 'wb') as f:
+                                f.write(file.content)
+                            print(f"Copied dataset file to sandbox: {dest_path}")
+                            
+                            # Add to uploaded dataset files list
+                            uploaded_dataset_files.append({
+                                "path": dest_path,
+                                "name": file_name,
+                                "sandbox_path": dest_path,
+                                "relative_path": f"DATASETS_PATH + '/{file_name}'",
+                                "connector_name": "DirectUpload"
+                            })
+                        except Exception as file_error:
+                            print(f"Error copying dataset file to sandbox: {str(file_error)}")
+                            logger.error(f"Error copying dataset file to sandbox: {str(file_error)}")
+        
+        # Process both dataset types - from connectors and from uploads
+        if new_msg_req.dataset_names and len(new_msg_req.dataset_names) > 0:
+            # Handle datasets specified by name (from connectors)
+            try:
+                print(f"\nATTEMPTING TO SET UP CODE INTERPRETER FOR DATASETS: {new_msg_req.dataset_names}")
+                
+                try:
+                    dataset_instructions = setup_code_interpreter_environment(
+                        db_session=db_session,
+                        dataset_names=new_msg_req.dataset_names
+                    )
+                    logger.info(f"Prepared datasets for code execution: {new_msg_req.dataset_names}")
+                    logger.info(f"Dataset instructions length: {len(dataset_instructions)}")
+                    
+                    # Add simple instruction to generate code - no need for extensive redundancy
+                    code_gen_instruction = (
+                            "\n\nIMPORTANT: Always respond with Python code that loads and analyzes the data files. "
+                            "Include data exploration steps like df.head() and df.info()."
+                    )
+                    dataset_instructions += code_gen_instruction
+                    logger.info("Added code generation instructions")
+                except Exception as inner_e:
+                    import traceback
+                    tb = traceback.format_exc()
+                    print(f"\nDETAILED ERROR SETTING UP DATASETS: {str(inner_e)}")
+                    print(f"ERROR TRACEBACK:\n{tb}")
+                    logger.error(f"Detailed error in dataset setup: {tb}")
+                    raise  # Re-raise to be caught by outer exception handler
+            except Exception as e:
+                print(f"\nFAILED TO PREPARE DATASETS - ERROR: {str(e)}")
+                logger.error(f"Failed to prepare datasets for code execution: {str(e)}")
+        elif uploaded_dataset_files:
+            # Handle uploaded dataset files
+            try:
+                print(f"\nSETTING UP CODE INTERPRETER FOR UPLOADED DATASET FILES: {[f['name'] for f in uploaded_dataset_files]}")
+                
+                # Create a dataset info structure like what's used by format_dataset_instructions
+                datasets_info = {
+                    "uploaded_dataset": uploaded_dataset_files
+                }
+                
+                # Format instructions using the same function used for connector datasets
+                dataset_instructions = format_dataset_instructions(datasets_info)
+                
+                # Add code generation instruction
+                code_gen_instruction = (
+                        "\n\nIMPORTANT: Always respond with Python code that loads and analyzes the data files. "
+                        "Include data exploration steps like df.head() and df.info()."
+                )
+                dataset_instructions += code_gen_instruction
+                
+                logger.info(f"Prepared uploaded dataset files for code execution")
+                logger.info(f"Dataset instructions length: {len(dataset_instructions)}")
+            except Exception as e:
+                print(f"\nFAILED TO PREPARE UPLOADED DATASET FILES - ERROR: {str(e)}")
+                logger.error(f"Failed to prepare uploaded dataset files for code execution: {str(e)}")
+
+        # After processing both dataset types, make sure we have instructions
+        if has_dataset_files and not dataset_instructions:
+            # If we have uploaded files but no instructions yet, generate them
+            try:
+                print(f"\nGENERATING INSTRUCTIONS FOR UPLOADED DATASET FILES")
+                
+                # Create a minimal dataset info structure for the uploaded files
+                datasets_info = {
+                    "uploaded_dataset": uploaded_dataset_files
+                }
+                
+                # Format instructions using the same function used for connector datasets
+                dataset_instructions = format_dataset_instructions(datasets_info) or ""
+                
+                # Add explicit instruction for print statements
+                dataset_instructions += (
+                    "\n\nIMPORTANT: ALWAYS wrap all outputs and results in print() statements.\n"
+                    "Example: print(df.head()) instead of just df.head()\n"
+                    "Example: print(f'Mean value: {mean_value}')\n"
+                )
+                
+                logger.info(f"Generated instructions for uploaded dataset files")
+                print(f"Generated instructions of length: {len(dataset_instructions)}")
+            except Exception as e:
+                print(f"\nERROR GENERATING INSTRUCTIONS FOR UPLOADED FILES: {str(e)}")
+                logger.error(f"Error generating instructions for uploaded files: {str(e)}")
+                # Set a minimal instruction if we can't generate proper ones
+                dataset_instructions = (
+                    "IMPORTANT: You are in CODE EXECUTION MODE.\n\n"
+                    "⚠️ CRITICAL: ALWAYS wrap all outputs in print() statements.\n"
+                    "For example: print(df.head()) instead of just df.head()\n"
+                )
 
         llm_provider = llm.config.model_provider
         llm_model_name = llm.config.model_name
@@ -832,6 +1038,55 @@ def stream_chat_message_objects(
         latest_query_files = [file for file in files if file.file_id in req_file_ids]
         user_file_ids = new_msg_req.user_file_ids or []
         user_folder_ids = new_msg_req.user_folder_ids or []
+
+        # Now process any uploaded CSV files - moved here to ensure latest_query_files is populated
+        if uploaded_csv_files:
+            for csv_file_info in uploaded_csv_files:
+                try:
+                    file_desc = csv_file_info["file_desc"]
+                    csv_filename = csv_file_info["filename"]
+                    
+                    # Find the actual file in latest_query_files by matching ID or name
+                    file_id = file_desc.get("id", "")
+                    uploaded_file = None
+                    
+                    # Try to match by file ID
+                    for file in latest_query_files:
+                        # Handle both full IDs and ID portions
+                        if file.file_id == file_id or file.file_id in file_id or file_id.endswith(file.file_id):
+                            uploaded_file = file
+                            print(f"Found file by ID match: {file.file_id}")
+                            break
+                    
+                    # If not found by ID, try by name
+                    if not uploaded_file:
+                        for file in latest_query_files:
+                            if file.name == csv_filename:
+                                uploaded_file = file
+                                print(f"Found file by name match: {file.name}")
+                                break
+                    
+                    if uploaded_file and uploaded_file.content:
+                        print(f"Found uploaded file content for {csv_filename} with size {len(uploaded_file.content)} bytes")
+                        
+                        # Ensure sandbox directories exist
+                        from onyx.server.features.code_interpreter.dataset_handler import ensure_sandbox_dirs, DATASETS_DIR
+                        ensure_sandbox_dirs()
+                        
+                        # Create destination path in sandbox
+                        dest_path = os.path.join(DATASETS_DIR, csv_filename)
+                        
+                        # Write the actual file content to the sandbox
+                        try:
+                            with open(dest_path, 'wb') as f:
+                                f.write(uploaded_file.content)
+                            print(f"Successfully copied uploaded file to sandbox: {dest_path}")
+                        except Exception as file_error:
+                            print(f"Error copying uploaded file to sandbox: {str(file_error)}")
+                except Exception as e:
+                    print(f"Error processing uploaded file: {str(e)}")
+                    import traceback
+                    print(f"Traceback: {traceback.format_exc()}")
 
         if persona.user_files:
             for file in persona.user_files:
@@ -1038,6 +1293,71 @@ def stream_chat_message_objects(
             prompt_config = PromptConfig.from_model(
                 final_msg.prompt or persona.prompts[0]
             )
+            
+        # If we have dataset instructions or uploaded dataset files, update the system prompt
+        if dataset_instructions or has_dataset_files:
+            # First check if the system prompt already contains the dataset marker
+            if "DATASET_MODE:" not in prompt_config.system_prompt:
+                # Prepare the dataset system prompt
+                dataset_names_str = ', '.join(new_msg_req.dataset_names) if new_msg_req.dataset_names else 'uploaded files'
+                dataset_header = f"CRITICAL SYSTEM OVERRIDE: This is a dataset analysis task. You must:\n"
+                dataset_header += "1. Analyze data directly using Python code\n"
+                dataset_header += "2. Use the exact filenames provided in the instructions\n"
+                dataset_header += "3. ALWAYS wrap all outputs in print() functions\n"
+                dataset_header += "4. Do not use search or retrieval features\n\n"
+                
+                # Add the dataset mode marker
+                dataset_header += "\n\nDATASET_MODE: The backend will handle dataset instructions generation.\n\n"
+                
+                # Create new system prompt with dataset instructions
+                new_system_prompt = dataset_header + prompt_config.system_prompt
+                
+                # Update the prompt_config
+                prompt_config = PromptConfig(
+                    system_prompt=new_system_prompt, 
+                    task_prompt=prompt_config.task_prompt,
+                    datetime_aware=prompt_config.datetime_aware,
+                    include_citations=prompt_config.include_citations
+                )
+                
+                # Log what we did
+                logger.info(f"Updated system prompt for dataset mode with dataset names: {dataset_names_str}")
+                
+                # Print the full system prompt for debugging
+                print("\n" + "="*80)
+                print("DATASET SYSTEM PROMPT ADDED:")
+                print(f"Dataset Names: {dataset_names_str}")
+                print("\n--- SYSTEM PROMPT START ---")
+                print(prompt_config.system_prompt)
+                print("--- SYSTEM PROMPT END ---")
+                print("="*80 + "\n")
+            
+            # Update the prompt to include the dataset instructions
+            if dataset_instructions:
+                # Always set the task prompt with dataset instructions
+                prompt_config = PromptConfig(
+                    system_prompt=prompt_config.system_prompt, 
+                    task_prompt=dataset_instructions,  # Set task prompt directly to dataset instructions
+                    datetime_aware=prompt_config.datetime_aware,
+                    include_citations=prompt_config.include_citations
+                )
+                
+                logger.info(f"Set task prompt to dataset instructions, length: {len(dataset_instructions)}")
+            
+            # Always print the dataset names and system prompt for debugging
+            print("\n" + "="*80)
+            print("DATASET SYSTEM PROMPT:")
+            dataset_names_str = ', '.join(new_msg_req.dataset_names) if new_msg_req.dataset_names else 'uploaded files'
+            print(f"Dataset Names: {dataset_names_str}")
+            
+            # Print the full system prompt for debugging purposes
+            print("\n--- SYSTEM PROMPT START ---")
+            print(prompt_config.system_prompt)
+            print("--- SYSTEM PROMPT END ---")
+            print("="*80 + "\n")
+            
+        # Build the prompt
+        logger.info("Building prompt")
 
         answer_style_config = AnswerStyleConfig(
             citation_config=CitationConfig(
@@ -1154,7 +1474,6 @@ def stream_chat_message_objects(
                     retrieval_options.filters.user_folder_ids = user_folder_ids
 
                     # Create override kwargs for the search tool
-
                     override_kwargs = SearchToolOverrideKwargs(
                         force_no_rerank=search_for_ordering_only,  # Skip reranking for ordering-only
                         alternate_db_session=None,

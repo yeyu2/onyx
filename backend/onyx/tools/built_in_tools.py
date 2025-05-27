@@ -9,6 +9,9 @@ from sqlalchemy.orm import Session
 
 from onyx.db.models import Persona
 from onyx.db.models import Tool as ToolDBModel
+from onyx.tools.tool_implementations.code_interpreter.code_interpreter_tool import (
+    CodeInterpreterTool,
+)
 from onyx.tools.tool_implementations.images.image_generation_tool import (
     ImageGenerationTool,
 )
@@ -16,6 +19,7 @@ from onyx.tools.tool_implementations.internet_search.internet_search_tool import
     InternetSearchTool,
 )
 from onyx.tools.tool_implementations.search.search_tool import SearchTool
+from onyx.tools.tool_implementations.weather.weather_tool import WeatherTool
 from onyx.tools.tool import Tool
 from onyx.utils.logger import setup_logger
 
@@ -44,6 +48,24 @@ BUILT_IN_TOOLS: list[InCodeToolInfo] = [
         ),
         in_code_tool_id=ImageGenerationTool.__name__,
         display_name=ImageGenerationTool._DISPLAY_NAME,
+    ),
+    InCodeToolInfo(
+        cls=WeatherTool,
+        description=(
+            "The Weather Action allows the assistant to provide weather information for a location. "
+            "The action will be used when the user asks about the weather."
+        ),
+        in_code_tool_id=WeatherTool.__name__,
+        display_name=WeatherTool._DISPLAY_NAME,
+    ),
+    InCodeToolInfo(
+        cls=CodeInterpreterTool,
+        description=(
+            "The Code Interpreter Action allows the assistant to execute Python code to analyze datasets, "
+            "create visualizations, or perform calculations. It will be used when the user asks about data analysis."
+        ),
+        in_code_tool_id=CodeInterpreterTool.__name__,
+        display_name=CodeInterpreterTool._DISPLAY_NAME,
     ),
     # don't show the InternetSearchTool as an option if BING_API_KEY is not available
     *(
@@ -159,6 +181,130 @@ def auto_add_search_tool_to_personas(db_session: Session) -> None:
     # Commit changes to the database
     db_session.commit()
     logger.notice("Completed adding SearchTool to relevant Personas.")
+
+
+def get_weather_tool(db_session: Session) -> ToolDBModel | None:
+    """
+    Retrieves the WeatherTool from the BUILT_IN_TOOLS list.
+    """
+    weather_tool_id = next(
+        (
+            tool["in_code_tool_id"]
+            for tool in BUILT_IN_TOOLS
+            if tool["cls"].__name__ == WeatherTool.__name__
+        ),
+        None,
+    )
+
+    if not weather_tool_id:
+        raise RuntimeError("WeatherTool not found in the BUILT_IN_TOOLS list.")
+
+    weather_tool = db_session.execute(
+        select(ToolDBModel).where(ToolDBModel.in_code_tool_id == weather_tool_id)
+    ).scalar_one_or_none()
+
+    return weather_tool
+
+
+def auto_add_weather_tool_to_search_personas(db_session: Session) -> None:
+    """
+    Automatically adds the WeatherTool to all Persona objects in the database that
+    already have the SearchTool. This makes the Weather tool available alongside
+    Search without requiring manual configuration.
+    """
+    # Fetch the SearchTool and WeatherTool from the database
+    search_tool = get_search_tool(db_session)
+    weather_tool = get_weather_tool(db_session)
+
+    if not search_tool:
+        raise RuntimeError("SearchTool not found in the database.")
+    
+    if not weather_tool:
+        raise RuntimeError("WeatherTool not found in the database.")
+
+    # Fetch all Personas that have the SearchTool
+    personas_with_search = (
+        db_session.execute(
+            select(Persona).where(Persona.tools.any(id=search_tool.id))
+        )
+        .scalars()
+        .all()
+    )
+
+    # Add the WeatherTool to each Persona that has SearchTool
+    counter = 0
+    for persona in personas_with_search:
+        if weather_tool not in persona.tools:
+            persona.tools.append(weather_tool)
+            counter += 1
+    
+    if counter > 0:
+        db_session.commit()
+        logger.notice(f"Added WeatherTool to {counter} Personas that had SearchTool.")
+    else:
+        logger.notice("No Personas needed WeatherTool added.")
+
+
+def get_code_interpreter_tool(db_session: Session) -> ToolDBModel | None:
+    """
+    Retrieves the CodeInterpreterTool from the BUILT_IN_TOOLS list.
+    """
+    code_interpreter_tool_id = next(
+        (
+            tool["in_code_tool_id"]
+            for tool in BUILT_IN_TOOLS
+            if tool["cls"].__name__ == CodeInterpreterTool.__name__
+        ),
+        None,
+    )
+
+    if not code_interpreter_tool_id:
+        raise RuntimeError("CodeInterpreterTool not found in the BUILT_IN_TOOLS list.")
+
+    code_interpreter_tool = db_session.execute(
+        select(ToolDBModel).where(ToolDBModel.in_code_tool_id == code_interpreter_tool_id)
+    ).scalar_one_or_none()
+
+    return code_interpreter_tool
+
+
+def auto_add_code_interpreter_tool_to_search_personas(db_session: Session) -> None:
+    """
+    Automatically adds the CodeInterpreterTool to all Persona objects in the database that
+    already have the SearchTool. This makes the Code Interpreter tool available alongside
+    Search without requiring manual configuration.
+    """
+    # Fetch the SearchTool and CodeInterpreterTool from the database
+    search_tool = get_search_tool(db_session)
+    code_interpreter_tool = get_code_interpreter_tool(db_session)
+
+    if not search_tool:
+        raise RuntimeError("SearchTool not found in the database.")
+    
+    if not code_interpreter_tool:
+        raise RuntimeError("CodeInterpreterTool not found in the database.")
+
+    # Fetch all Personas that have the SearchTool
+    personas_with_search = (
+        db_session.execute(
+            select(Persona).where(Persona.tools.any(id=search_tool.id))
+        )
+        .scalars()
+        .all()
+    )
+
+    # Add the CodeInterpreterTool to each Persona that has SearchTool
+    counter = 0
+    for persona in personas_with_search:
+        if code_interpreter_tool not in persona.tools:
+            persona.tools.append(code_interpreter_tool)
+            counter += 1
+    
+    if counter > 0:
+        db_session.commit()
+        logger.notice(f"Added CodeInterpreterTool to {counter} Personas that had SearchTool.")
+    else:
+        logger.notice("No Personas needed CodeInterpreterTool added.")
 
 
 _built_in_tools_cache: dict[str, Type[Tool]] | None = None

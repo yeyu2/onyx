@@ -469,50 +469,51 @@ export function ChatInputBar({
   const [showDatasetUpload, setShowDatasetUpload] = useState(false);
 
   // Filter options display
-  const selectedSourcesIcons = filterManager.selectedSources.map((source) => {
-    console.log("Rendering source chip:", source.displayName);
-    return (
-      <SourceChip2
-        key={source.internalName}
-        icon={<SourceIcon sourceType={source.internalName as ValidSources} iconSize={12} />}
-        title={source.displayName}
-        onRemove={() => {
-          filterManager.setSelectedSources(
-            filterManager.selectedSources.filter(
-              (s) => s.internalName !== source.internalName
-            )
-          );
-        }}
-        includeTooltip
-        includeAnimation
-      />
-    );
-  });
+  const selectedSourcesIcons = React.useMemo(() => {
+    return filterManager.selectedSources.map((source) => {
+      return (
+        <SourceChip2
+          key={source.internalName}
+          icon={<SourceIcon sourceType={source.internalName as ValidSources} iconSize={12} />}
+          title={source.displayName}
+          onRemove={() => {
+            filterManager.setSelectedSources(
+              filterManager.selectedSources.filter(
+                (s) => s.internalName !== source.internalName
+              )
+            );
+          }}
+          includeTooltip
+          includeAnimation
+        />
+      );
+    });
+  }, [filterManager.selectedSources]);
 
-  const selectedTagsIcons = filterManager.selectedTags.map((tag) => {
-    console.log("Rendering tag chip:", `${tag.tag_key}: ${tag.tag_value}`);
-    return (
-      <SourceChip2
-        key={`${tag.tag_key}:${tag.tag_value}`}
-        icon={<TagIcon size={12} className="text-text-900" />}
-        title={`${tag.tag_key}: ${tag.tag_value}`}
-        onRemove={() => {
-          filterManager.setSelectedTags(
-            filterManager.selectedTags.filter(
-              (t) =>
-                !(t.tag_key === tag.tag_key && t.tag_value === tag.tag_value)
-            )
-          );
-        }}
-        includeTooltip
-        includeAnimation
-      />
-    );
-  });
+  const selectedTagsIcons = React.useMemo(() => {
+    return filterManager.selectedTags.map((tag) => {
+      return (
+        <SourceChip2
+          key={`${tag.tag_key}:${tag.tag_value}`}
+          icon={<TagIcon size={12} className="text-text-900" />}
+          title={`${tag.tag_key}: ${tag.tag_value}`}
+          onRemove={() => {
+            filterManager.setSelectedTags(
+              filterManager.selectedTags.filter(
+                (t) =>
+                  !(t.tag_key === tag.tag_key && t.tag_value === tag.tag_value)
+              )
+            );
+          }}
+          includeTooltip
+          includeAnimation
+        />
+      );
+    });
+  }, [filterManager.selectedTags]);
 
-  const selectedDocumentSetsIcons = filterManager.selectedDocumentSets.map(
-    (documentSet) => {
-      console.log("Rendering document set chip:", documentSet);
+  const selectedDocumentSetsIcons = React.useMemo(() => {
+    return filterManager.selectedDocumentSets.map((documentSet) => {
       return (
         <SourceChip2
           key={documentSet}
@@ -529,12 +530,11 @@ export function ChatInputBar({
           includeAnimation
         />
       );
-    }
-  );
+    });
+  }, [filterManager.selectedDocumentSets]);
 
-  const selectedDatasetsIcons = filterManager.selectedDatasets.map(
-    (dataset) => {
-      console.log("Rendering dataset chip:", dataset);
+  const selectedDatasetsIcons = React.useMemo(() => {
+    return filterManager.selectedDatasets.map((dataset) => {
       return (
         <SourceChip2
           key={dataset}
@@ -551,19 +551,23 @@ export function ChatInputBar({
           includeAnimation
         />
       );
-    }
-  );
+    });
+  }, [filterManager.selectedDatasets]);
 
   // are there any active filters?
-  const activeFilters =
-    filterManager.timeRange !== null ||
-    filterManager.selectedSources.length > 0 ||
-    filterManager.selectedDocumentSets.length > 0 ||
-    filterManager.selectedTags.length > 0 ||
-    filterManager.selectedDatasets.length > 0;
-    
-  console.log("Active filters?", activeFilters);
-  console.log("Selected datasets:", filterManager.selectedDatasets);
+  const activeFilters = React.useMemo(() => {
+    return filterManager.timeRange !== null ||
+      filterManager.selectedSources.length > 0 ||
+      filterManager.selectedDocumentSets.length > 0 ||
+      filterManager.selectedTags.length > 0 ||
+      filterManager.selectedDatasets.length > 0;
+  }, [
+    filterManager.timeRange,
+    filterManager.selectedSources.length,
+    filterManager.selectedDocumentSets.length,
+    filterManager.selectedTags.length,
+    filterManager.selectedDatasets.length
+  ]);
 
   return (
     <div id="onyx-chat-input">
@@ -591,7 +595,7 @@ export function ChatInputBar({
               <FiDatabase className="text-blue-500 mr-2" />
               <span className="text-sm text-blue-700">
                 Dataset Mode: {hasDatasetFilters ? `Using ${filterManager.selectedDatasets.length} selected datasets` : "Using uploaded dataset files"}. 
-                Questions will be answered with Python code examples.
+                Questions will be answered by code interpreter.
               </span>
             </div>
           )}

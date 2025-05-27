@@ -1,0 +1,7 @@
+---
+description: 
+globs: 
+alwaysApply: true
+---
+No need to make any test script.
+Also, no need to operate command to restart or other operation for the code execution test.

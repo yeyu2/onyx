@@ -1,0 +1,698 @@
+2025-05-27 12:02:11,198 - code_interpreter - ERROR - Code execution error: FileNotFoundError: [Errno 2] No such file or directory: '/datasets/MOCK_DATA.csv'
+Traceback (most recent call last):
+  File "/Users/yeyu/Documents/client_project/onyx_doug/onyx_dev/onyx/code_interp_sandbox/app.py", line 222, in execute_code
+    exec(request.code, exec_globals, interpreter.locals)
+  File "<string>", line 4, in <module>
+  File "/Users/yeyu/Documents/client_project/onyx_doug/onyx_dev/onyx/code_interp_sandbox/env/lib/python3.11/site-packages/pandas/io/parsers/readers.py", line 912, in read_csv
+    return _read(filepath_or_buffer, kwds)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/yeyu/Documents/client_project/onyx_doug/onyx_dev/onyx/code_interp_sandbox/env/lib/python3.11/site-packages/pandas/io/parsers/readers.py", line 577, in _read
+    parser = TextFileReader(filepath_or_buffer, **kwds)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/yeyu/Documents/client_project/onyx_doug/onyx_dev/onyx/code_interp_sandbox/env/lib/python3.11/site-packages/pandas/io/parsers/readers.py", line 1407, in __init__
+    self._engine = self._make_engine(f, self.engine)
+                   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/yeyu/Documents/client_project/onyx_doug/onyx_dev/onyx/code_interp_sandbox/env/lib/python3.11/site-packages/pandas/io/parsers/readers.py", line 1661, in _make_engine
+    self.handles = get_handle(
+                   ^^^^^^^^^^^
+  File "/Users/yeyu/Documents/client_project/onyx_doug/onyx_dev/onyx/code_interp_sandbox/env/lib/python3.11/site-packages/pandas/io/common.py", line 859, in get_handle
+    handle = open(
+             ^^^^^
+FileNotFoundError: [Errno 2] No such file or directory: '/datasets/MOCK_DATA.csv'
+
+2025-05-27 12:21:05,101 - code_interpreter - ERROR - Code execution error: FileNotFoundError: [Errno 2] No such file or directory: '/datasets/MOCK_DATA.csv'
+Traceback (most recent call last):
+  File "/Users/yeyu/Documents/client_project/onyx_doug/onyx_dev/onyx/code_interp_sandbox/app.py", line 224, in execute_code
+    exec(request.code, exec_globals, interpreter.locals)
+  File "<string>", line 4, in <module>
+  File "/Users/yeyu/Documents/client_project/onyx_doug/onyx_dev/onyx/code_interp_sandbox/env/lib/python3.11/site-packages/pandas/io/parsers/readers.py", line 912, in read_csv
+    return _read(filepath_or_buffer, kwds)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/yeyu/Documents/client_project/onyx_doug/onyx_dev/onyx/code_interp_sandbox/env/lib/python3.11/site-packages/pandas/io/parsers/readers.py", line 577, in _read
+    parser = TextFileReader(filepath_or_buffer, **kwds)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/yeyu/Documents/client_project/onyx_doug/onyx_dev/onyx/code_interp_sandbox/env/lib/python3.11/site-packages/pandas/io/parsers/readers.py", line 1407, in __init__
+    self._engine = self._make_engine(f, self.engine)
+                   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/yeyu/Documents/client_project/onyx_doug/onyx_dev/onyx/code_interp_sandbox/env/lib/python3.11/site-packages/pandas/io/parsers/readers.py", line 1661, in _make_engine
+    self.handles = get_handle(
+                   ^^^^^^^^^^^
+  File "/Users/yeyu/Documents/client_project/onyx_doug/onyx_dev/onyx/code_interp_sandbox/env/lib/python3.11/site-packages/pandas/io/common.py", line 859, in get_handle
+    handle = open(
+             ^^^^^
+FileNotFoundError: [Errno 2] No such file or directory: '/datasets/MOCK_DATA.csv'
+
+2025-05-27 12:39:23,329 - code_interpreter - INFO - Code execution response: []
+2025-05-27 12:42:32,684 - code_interpreter - INFO - DATASETS_DIR set to: /Users/yeyu/Documents/client_project/onyx_doug/onyx_dev/onyx/code_interp_sandbox/datasets
+2025-05-27 12:42:32,684 - code_interpreter - INFO - Resetting interpreter state.
+2025-05-27 12:42:32,684 - code_interpreter - INFO - CodeInterpreterState initialized.
+2025-05-27 12:42:32,706 - code_interpreter - INFO - DATASETS_DIR set to: /Users/yeyu/Documents/client_project/onyx_doug/onyx_dev/onyx/code_interp_sandbox/datasets
+2025-05-27 12:42:32,707 - code_interpreter - INFO - Resetting interpreter state.
+2025-05-27 12:42:32,707 - code_interpreter - INFO - CodeInterpreterState initialized.
+2025-05-27 12:42:55,749 - code_interpreter - INFO - Execute endpoint called. Session ID: None
+2025-05-27 12:42:55,749 - code_interpreter - INFO - Code received:
+import pandas as pd
+
+# Load CSV file: MOCK_DATA.csv
+df = pd.read_csv(DATASETS_PATH + '/MOCK_DATA.csv')
+
+# Count the number of females in the dataset
+num_females = df[df['gender'] == 'Female'].shape[0]
+num_females
+2025-05-27 12:42:55,749 - code_interpreter - INFO - Cleared previous interpreter output and figures.
+2025-05-27 12:42:55,749 - code_interpreter - INFO - Detected 'pd' in code. Importing pandas.
+2025-05-27 12:42:55,897 - code_interpreter - INFO - Added 'Path' to execution globals.
+2025-05-27 12:42:55,897 - code_interpreter - INFO - Added 'json' to execution globals.
+2025-05-27 12:42:55,897 - code_interpreter - INFO - Added 'DATASETS_PATH' to execution globals: /Users/yeyu/Documents/client_project/onyx_doug/onyx_dev/onyx/code_interp_sandbox/datasets
+2025-05-27 12:42:55,897 - code_interpreter - INFO - Executing code...
+2025-05-27 12:42:55,908 - code_interpreter - INFO - Code execution finished.
+2025-05-27 12:42:56,024 - code_interpreter - INFO - Code executed successfully in 0.2742 seconds.
+2025-05-27 12:42:56,024 - code_interpreter - INFO - Interpreter busy status set to False.
+2025-05-27 12:47:29,705 - code_interpreter - INFO - DATASETS_DIR set to: /Users/yeyu/Documents/client_project/onyx_doug/onyx_dev/onyx/code_interp_sandbox/datasets
+2025-05-27 12:47:29,705 - code_interpreter - INFO - Resetting interpreter state.
+2025-05-27 12:47:29,705 - code_interpreter - INFO - CodeInterpreterState initialized.
+2025-05-27 12:47:29,736 - code_interpreter - INFO - DATASETS_DIR set to: /Users/yeyu/Documents/client_project/onyx_doug/onyx_dev/onyx/code_interp_sandbox/datasets
+2025-05-27 12:47:29,736 - code_interpreter - INFO - Resetting interpreter state.
+2025-05-27 12:47:29,736 - code_interpreter - INFO - CodeInterpreterState initialized.
+2025-05-27 12:47:54,727 - code_interpreter - INFO - Execute endpoint called. Session ID: None
+2025-05-27 12:47:54,727 - code_interpreter - INFO - Code received for execution:
+---
+import pandas as pd
+
+# Load CSV file: MOCK_DATA.csv
+df = pd.read_csv(DATASETS_PATH + '/MOCK_DATA.csv')
+
+# Count the number of females
+gender_counts = df['gender'].value_counts()
+number_of_females = gender_counts.get('Female', 0)
+number_of_females
+---
+2025-05-27 12:47:54,727 - code_interpreter - INFO - Cleared previous interpreter output and figures.
+2025-05-27 12:47:54,727 - code_interpreter - INFO - Detected 'pd' in code. Importing pandas.
+2025-05-27 12:47:54,871 - code_interpreter - INFO - Added 'Path' to execution globals.
+2025-05-27 12:47:54,871 - code_interpreter - INFO - Added 'json' to execution globals.
+2025-05-27 12:47:54,871 - code_interpreter - INFO - Added 'DATASETS_PATH' to execution globals: /Users/yeyu/Documents/client_project/onyx_doug/onyx_dev/onyx/code_interp_sandbox/datasets
+2025-05-27 12:47:54,871 - code_interpreter - INFO - Executing code...
+2025-05-27 12:47:54,875 - code_interpreter - INFO - Code execution finished.
+2025-05-27 12:47:54,985 - code_interpreter - INFO - Code executed successfully in 0.2580 seconds.
+2025-05-27 12:47:54,985 - code_interpreter - INFO - Interpreter busy status set to False.
+2025-05-27 12:47:54,985 - code_interpreter - INFO - Execution result being returned:
+---
+{
+  "success": true,
+  "output": [],
+  "error": null,
+  "execution_time": 0.258038
+}
+---
+2025-05-27 12:58:37,501 - code_interpreter - INFO - Execute endpoint called. Session ID: None
+2025-05-27 12:58:37,501 - code_interpreter - INFO - Code received for execution:
+---
+import pandas as pd
+
+# Load CSV file: MOCK_DATA.csv
+df = pd.read_csv(DATASETS_PATH + '/MOCK_DATA.csv')
+
+# Count the number of females in the dataset
+female_count = df[df['gender'] == 'Female'].shape[0]
+print(f'Number of females: {female_count}')
+---
+2025-05-27 12:58:37,501 - code_interpreter - INFO - Cleared previous interpreter output and figures.
+2025-05-27 12:58:37,501 - code_interpreter - INFO - Detected 'pd' in code. Importing pandas.
+2025-05-27 12:58:37,501 - code_interpreter - INFO - Added 'Path' to execution globals.
+2025-05-27 12:58:37,501 - code_interpreter - INFO - Added 'json' to execution globals.
+2025-05-27 12:58:37,501 - code_interpreter - INFO - Added 'DATASETS_PATH' to execution globals: /Users/yeyu/Documents/client_project/onyx_doug/onyx_dev/onyx/code_interp_sandbox/datasets
+2025-05-27 12:58:37,501 - code_interpreter - INFO - Executing code...
+2025-05-27 12:58:37,507 - code_interpreter - INFO - Captured print: Number of females: 466
+2025-05-27 12:58:37,507 - code_interpreter - INFO - Code execution finished.
+2025-05-27 12:58:37,507 - code_interpreter - INFO - Code executed successfully in 0.0059 seconds.
+2025-05-27 12:58:37,507 - code_interpreter - INFO - Interpreter busy status set to False.
+2025-05-27 12:58:37,507 - code_interpreter - INFO - Execution result being returned:
+---
+{
+  "success": true,
+  "output": [
+    {
+      "type": "stdout",
+      "data": "Number of females: 466\n"
+    }
+  ],
+  "error": null,
+  "execution_time": 0.005935
+}
+---
+2025-05-27 13:00:01,878 - code_interpreter - INFO - Execute endpoint called. Session ID: None
+2025-05-27 13:00:01,878 - code_interpreter - INFO - Code received for execution:
+---
+import pandas as pd
+
+# Load the dataset
+df = pd.read_csv('MOCK_DATA.csv')
+
+# Count the number of females
+num_females = df[df['gender'] == 'Female'].shape[0]
+num_females
+---
+2025-05-27 13:00:01,878 - code_interpreter - INFO - Cleared previous interpreter output and figures.
+2025-05-27 13:00:01,878 - code_interpreter - INFO - Detected 'pd' in code. Importing pandas.
+2025-05-27 13:00:01,878 - code_interpreter - INFO - Added 'Path' to execution globals.
+2025-05-27 13:00:01,878 - code_interpreter - INFO - Added 'json' to execution globals.
+2025-05-27 13:00:01,878 - code_interpreter - INFO - Added 'DATASETS_PATH' to execution globals: /Users/yeyu/Documents/client_project/onyx_doug/onyx_dev/onyx/code_interp_sandbox/datasets
+2025-05-27 13:00:01,878 - code_interpreter - INFO - Executing code...
+2025-05-27 13:00:01,882 - code_interpreter - ERROR - Code execution error: FileNotFoundError: [Errno 2] No such file or directory: 'MOCK_DATA.csv'
+Traceback (most recent call last):
+  File "/Users/yeyu/Documents/client_project/onyx_doug/onyx_dev/onyx/code_interp_sandbox/app.py", line 250, in execute_code
+    exec(request.code, exec_globals, interpreter.locals)
+  File "<string>", line 4, in <module>
+  File "/Users/yeyu/Documents/client_project/onyx_doug/onyx_dev/onyx/code_interp_sandbox/env/lib/python3.11/site-packages/pandas/io/parsers/readers.py", line 912, in read_csv
+    return _read(filepath_or_buffer, kwds)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/yeyu/Documents/client_project/onyx_doug/onyx_dev/onyx/code_interp_sandbox/env/lib/python3.11/site-packages/pandas/io/parsers/readers.py", line 577, in _read
+    parser = TextFileReader(filepath_or_buffer, **kwds)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/yeyu/Documents/client_project/onyx_doug/onyx_dev/onyx/code_interp_sandbox/env/lib/python3.11/site-packages/pandas/io/parsers/readers.py", line 1407, in __init__
+    self._engine = self._make_engine(f, self.engine)
+                   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/yeyu/Documents/client_project/onyx_doug/onyx_dev/onyx/code_interp_sandbox/env/lib/python3.11/site-packages/pandas/io/parsers/readers.py", line 1661, in _make_engine
+    self.handles = get_handle(
+                   ^^^^^^^^^^^
+  File "/Users/yeyu/Documents/client_project/onyx_doug/onyx_dev/onyx/code_interp_sandbox/env/lib/python3.11/site-packages/pandas/io/common.py", line 859, in get_handle
+    handle = open(
+             ^^^^^
+FileNotFoundError: [Errno 2] No such file or directory: 'MOCK_DATA.csv'
+
+2025-05-27 13:00:01,882 - code_interpreter - INFO - Interpreter busy status set to False.
+2025-05-27 13:00:01,882 - code_interpreter - INFO - Execution result being returned:
+---
+{
+  "success": false,
+  "output": [],
+  "error": "FileNotFoundError: [Errno 2] No such file or directory: 'MOCK_DATA.csv'\n\nTraceback (most recent call last):\n  File \"/Users/yeyu/Documents/client_project/onyx_doug/onyx_dev/onyx/code_interp_sandbox/app.py\", line 250, in execute_code\n    exec(request.code, exec_globals, interpreter.locals)\n  File \"<string>\", line 4, in <module>\n  File \"/Users/yeyu/Documents/client_project/onyx_doug/onyx_dev/onyx/code_interp_sandbox/env/lib/python3.11/site-packages/pandas/io/parsers/readers.py\", line 912, in read_csv\n    return _read(filepath_or_buffer, kwds)\n           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"/Users/yeyu/Documents/client_project/onyx_doug/onyx_dev/onyx/code_interp_sandbox/env/lib/python3.11/site-packages/pandas/io/parsers/readers.py\", line 577, in _read\n    parser = TextFileReader(filepath_or_buffer, **kwds)\n             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"/Users/yeyu/Documents/client_project/onyx_doug/onyx_dev/onyx/code_interp_sandbox/env/lib/python3.11/site-packages/pandas/io/parsers/readers.py\", line 1407, in __init__\n    self._engine = self._make_engine(f, self.engine)\n                   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"/Users/yeyu/Documents/client_project/onyx_doug/onyx_dev/onyx/code_interp_sandbox/env/lib/python3.11/site-packages/pandas/io/parsers/readers.py\", line 1661, in _make_engine\n    self.handles = get_handle(\n                   ^^^^^^^^^^^\n  File \"/Users/yeyu/Documents/client_project/onyx_doug/onyx_dev/onyx/code_interp_sandbox/env/lib/python3.11/site-packages/pandas/io/common.py\", line 859, in get_handle\n    handle = open(\n             ^^^^^\nFileNotFoundError: [Errno 2] No such file or directory: 'MOCK_DATA.csv'\n",
+  "execution_time": 0.004079
+}
+---
+2025-05-27 13:25:50,541 - code_interpreter - INFO - Execute endpoint called. Session ID: None
+2025-05-27 13:25:50,541 - code_interpreter - INFO - Code received for execution:
+---
+import pandas as pd
+
+data = pd.read_csv('MOCK_DATA (1).csv')
+unique_airlines = data['airline_name'].nunique()
+unique_airlines
+---
+2025-05-27 13:25:50,541 - code_interpreter - INFO - Cleared previous interpreter output and figures.
+2025-05-27 13:25:50,541 - code_interpreter - INFO - Detected 'pd' in code. Importing pandas.
+2025-05-27 13:25:50,541 - code_interpreter - INFO - Added 'Path' to execution globals.
+2025-05-27 13:25:50,541 - code_interpreter - INFO - Added 'json' to execution globals.
+2025-05-27 13:25:50,541 - code_interpreter - INFO - Added 'DATASETS_PATH' to execution globals: /Users/yeyu/Documents/client_project/onyx_doug/onyx_dev/onyx/code_interp_sandbox/datasets
+2025-05-27 13:25:50,541 - code_interpreter - INFO - Executing code...
+2025-05-27 13:25:50,549 - code_interpreter - ERROR - Code execution error: FileNotFoundError: [Errno 2] No such file or directory: 'MOCK_DATA (1).csv'
+Traceback (most recent call last):
+  File "/Users/yeyu/Documents/client_project/onyx_doug/onyx_dev/onyx/code_interp_sandbox/app.py", line 250, in execute_code
+    exec(request.code, exec_globals, interpreter.locals)
+  File "<string>", line 3, in <module>
+  File "/Users/yeyu/Documents/client_project/onyx_doug/onyx_dev/onyx/code_interp_sandbox/env/lib/python3.11/site-packages/pandas/io/parsers/readers.py", line 912, in read_csv
+    return _read(filepath_or_buffer, kwds)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/yeyu/Documents/client_project/onyx_doug/onyx_dev/onyx/code_interp_sandbox/env/lib/python3.11/site-packages/pandas/io/parsers/readers.py", line 577, in _read
+    parser = TextFileReader(filepath_or_buffer, **kwds)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/yeyu/Documents/client_project/onyx_doug/onyx_dev/onyx/code_interp_sandbox/env/lib/python3.11/site-packages/pandas/io/parsers/readers.py", line 1407, in __init__
+    self._engine = self._make_engine(f, self.engine)
+                   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/yeyu/Documents/client_project/onyx_doug/onyx_dev/onyx/code_interp_sandbox/env/lib/python3.11/site-packages/pandas/io/parsers/readers.py", line 1661, in _make_engine
+    self.handles = get_handle(
+                   ^^^^^^^^^^^
+  File "/Users/yeyu/Documents/client_project/onyx_doug/onyx_dev/onyx/code_interp_sandbox/env/lib/python3.11/site-packages/pandas/io/common.py", line 859, in get_handle
+    handle = open(
+             ^^^^^
+FileNotFoundError: [Errno 2] No such file or directory: 'MOCK_DATA (1).csv'
+
+2025-05-27 13:25:50,550 - code_interpreter - INFO - Interpreter busy status set to False.
+2025-05-27 13:25:50,551 - code_interpreter - INFO - Execution result being returned:
+---
+{
+  "success": false,
+  "output": [],
+  "error": "FileNotFoundError: [Errno 2] No such file or directory: 'MOCK_DATA (1).csv'\n\nTraceback (most recent call last):\n  File \"/Users/yeyu/Documents/client_project/onyx_doug/onyx_dev/onyx/code_interp_sandbox/app.py\", line 250, in execute_code\n    exec(request.code, exec_globals, interpreter.locals)\n  File \"<string>\", line 3, in <module>\n  File \"/Users/yeyu/Documents/client_project/onyx_doug/onyx_dev/onyx/code_interp_sandbox/env/lib/python3.11/site-packages/pandas/io/parsers/readers.py\", line 912, in read_csv\n    return _read(filepath_or_buffer, kwds)\n           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"/Users/yeyu/Documents/client_project/onyx_doug/onyx_dev/onyx/code_interp_sandbox/env/lib/python3.11/site-packages/pandas/io/parsers/readers.py\", line 577, in _read\n    parser = TextFileReader(filepath_or_buffer, **kwds)\n             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"/Users/yeyu/Documents/client_project/onyx_doug/onyx_dev/onyx/code_interp_sandbox/env/lib/python3.11/site-packages/pandas/io/parsers/readers.py\", line 1407, in __init__\n    self._engine = self._make_engine(f, self.engine)\n                   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"/Users/yeyu/Documents/client_project/onyx_doug/onyx_dev/onyx/code_interp_sandbox/env/lib/python3.11/site-packages/pandas/io/parsers/readers.py\", line 1661, in _make_engine\n    self.handles = get_handle(\n                   ^^^^^^^^^^^\n  File \"/Users/yeyu/Documents/client_project/onyx_doug/onyx_dev/onyx/code_interp_sandbox/env/lib/python3.11/site-packages/pandas/io/common.py\", line 859, in get_handle\n    handle = open(\n             ^^^^^\nFileNotFoundError: [Errno 2] No such file or directory: 'MOCK_DATA (1).csv'\n",
+  "execution_time": 0.008372
+}
+---
+2025-05-27 13:36:39,534 - code_interpreter - INFO - Execute endpoint called. Session ID: None
+2025-05-27 13:36:39,535 - code_interpreter - INFO - Code received for execution:
+---
+import pandas as pd
+
+data = pd.read_csv('MOCK_DATA.csv')
+female_count = data[data['gender'] == 'Female'].shape[0]
+female_count
+---
+2025-05-27 13:36:39,535 - code_interpreter - INFO - Cleared previous interpreter output and figures.
+2025-05-27 13:36:39,535 - code_interpreter - INFO - Detected 'pd' in code. Importing pandas.
+2025-05-27 13:36:39,536 - code_interpreter - INFO - Added 'Path' to execution globals.
+2025-05-27 13:36:39,536 - code_interpreter - INFO - Added 'json' to execution globals.
+2025-05-27 13:36:39,536 - code_interpreter - INFO - Added 'DATASETS_PATH' to execution globals: /Users/yeyu/Documents/client_project/onyx_doug/onyx_dev/onyx/code_interp_sandbox/datasets
+2025-05-27 13:36:39,536 - code_interpreter - INFO - Executing code...
+2025-05-27 13:36:39,669 - code_interpreter - ERROR - Code execution error: FileNotFoundError: [Errno 2] No such file or directory: 'MOCK_DATA.csv'
+Traceback (most recent call last):
+  File "/Users/yeyu/Documents/client_project/onyx_doug/onyx_dev/onyx/code_interp_sandbox/app.py", line 250, in execute_code
+    exec(request.code, exec_globals, interpreter.locals)
+  File "<string>", line 3, in <module>
+  File "/Users/yeyu/Documents/client_project/onyx_doug/onyx_dev/onyx/code_interp_sandbox/env/lib/python3.11/site-packages/pandas/io/parsers/readers.py", line 912, in read_csv
+    return _read(filepath_or_buffer, kwds)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/yeyu/Documents/client_project/onyx_doug/onyx_dev/onyx/code_interp_sandbox/env/lib/python3.11/site-packages/pandas/io/parsers/readers.py", line 577, in _read
+    parser = TextFileReader(filepath_or_buffer, **kwds)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/yeyu/Documents/client_project/onyx_doug/onyx_dev/onyx/code_interp_sandbox/env/lib/python3.11/site-packages/pandas/io/parsers/readers.py", line 1407, in __init__
+    self._engine = self._make_engine(f, self.engine)
+                   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/yeyu/Documents/client_project/onyx_doug/onyx_dev/onyx/code_interp_sandbox/env/lib/python3.11/site-packages/pandas/io/parsers/readers.py", line 1661, in _make_engine
+    self.handles = get_handle(
+                   ^^^^^^^^^^^
+  File "/Users/yeyu/Documents/client_project/onyx_doug/onyx_dev/onyx/code_interp_sandbox/env/lib/python3.11/site-packages/pandas/io/common.py", line 859, in get_handle
+    handle = open(
+             ^^^^^
+FileNotFoundError: [Errno 2] No such file or directory: 'MOCK_DATA.csv'
+
+2025-05-27 13:36:39,673 - code_interpreter - INFO - Interpreter busy status set to False.
+2025-05-27 13:36:39,673 - code_interpreter - INFO - Execution result being returned:
+---
+{
+  "success": false,
+  "output": [],
+  "error": "FileNotFoundError: [Errno 2] No such file or directory: 'MOCK_DATA.csv'\n\nTraceback (most recent call last):\n  File \"/Users/yeyu/Documents/client_project/onyx_doug/onyx_dev/onyx/code_interp_sandbox/app.py\", line 250, in execute_code\n    exec(request.code, exec_globals, interpreter.locals)\n  File \"<string>\", line 3, in <module>\n  File \"/Users/yeyu/Documents/client_project/onyx_doug/onyx_dev/onyx/code_interp_sandbox/env/lib/python3.11/site-packages/pandas/io/parsers/readers.py\", line 912, in read_csv\n    return _read(filepath_or_buffer, kwds)\n           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"/Users/yeyu/Documents/client_project/onyx_doug/onyx_dev/onyx/code_interp_sandbox/env/lib/python3.11/site-packages/pandas/io/parsers/readers.py\", line 577, in _read\n    parser = TextFileReader(filepath_or_buffer, **kwds)\n             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"/Users/yeyu/Documents/client_project/onyx_doug/onyx_dev/onyx/code_interp_sandbox/env/lib/python3.11/site-packages/pandas/io/parsers/readers.py\", line 1407, in __init__\n    self._engine = self._make_engine(f, self.engine)\n                   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"/Users/yeyu/Documents/client_project/onyx_doug/onyx_dev/onyx/code_interp_sandbox/env/lib/python3.11/site-packages/pandas/io/parsers/readers.py\", line 1661, in _make_engine\n    self.handles = get_handle(\n                   ^^^^^^^^^^^\n  File \"/Users/yeyu/Documents/client_project/onyx_doug/onyx_dev/onyx/code_interp_sandbox/env/lib/python3.11/site-packages/pandas/io/common.py\", line 859, in get_handle\n    handle = open(\n             ^^^^^\nFileNotFoundError: [Errno 2] No such file or directory: 'MOCK_DATA.csv'\n",
+  "execution_time": 0.137652
+}
+---
+2025-05-27 13:38:16,156 - code_interpreter - INFO - Execute endpoint called. Session ID: None
+2025-05-27 13:38:16,157 - code_interpreter - INFO - Code received for execution:
+---
+import pandas as pd
+
+data = pd.read_csv('MOCK_DATA.csv')
+male_count = data[data['gender'] == 'Male'].shape[0]
+male_count
+---
+2025-05-27 13:38:16,157 - code_interpreter - INFO - Cleared previous interpreter output and figures.
+2025-05-27 13:38:16,157 - code_interpreter - INFO - Detected 'pd' in code. Importing pandas.
+2025-05-27 13:38:16,157 - code_interpreter - INFO - Added 'Path' to execution globals.
+2025-05-27 13:38:16,157 - code_interpreter - INFO - Added 'json' to execution globals.
+2025-05-27 13:38:16,157 - code_interpreter - INFO - Added 'DATASETS_PATH' to execution globals: /Users/yeyu/Documents/client_project/onyx_doug/onyx_dev/onyx/code_interp_sandbox/datasets
+2025-05-27 13:38:16,157 - code_interpreter - INFO - Executing code...
+2025-05-27 13:38:16,158 - code_interpreter - ERROR - Code execution error: FileNotFoundError: [Errno 2] No such file or directory: 'MOCK_DATA.csv'
+Traceback (most recent call last):
+  File "/Users/yeyu/Documents/client_project/onyx_doug/onyx_dev/onyx/code_interp_sandbox/app.py", line 250, in execute_code
+    exec(request.code, exec_globals, interpreter.locals)
+  File "<string>", line 3, in <module>
+  File "/Users/yeyu/Documents/client_project/onyx_doug/onyx_dev/onyx/code_interp_sandbox/env/lib/python3.11/site-packages/pandas/io/parsers/readers.py", line 912, in read_csv
+    return _read(filepath_or_buffer, kwds)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/yeyu/Documents/client_project/onyx_doug/onyx_dev/onyx/code_interp_sandbox/env/lib/python3.11/site-packages/pandas/io/parsers/readers.py", line 577, in _read
+    parser = TextFileReader(filepath_or_buffer, **kwds)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/yeyu/Documents/client_project/onyx_doug/onyx_dev/onyx/code_interp_sandbox/env/lib/python3.11/site-packages/pandas/io/parsers/readers.py", line 1407, in __init__
+    self._engine = self._make_engine(f, self.engine)
+                   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/yeyu/Documents/client_project/onyx_doug/onyx_dev/onyx/code_interp_sandbox/env/lib/python3.11/site-packages/pandas/io/parsers/readers.py", line 1661, in _make_engine
+    self.handles = get_handle(
+                   ^^^^^^^^^^^
+  File "/Users/yeyu/Documents/client_project/onyx_doug/onyx_dev/onyx/code_interp_sandbox/env/lib/python3.11/site-packages/pandas/io/common.py", line 859, in get_handle
+    handle = open(
+             ^^^^^
+FileNotFoundError: [Errno 2] No such file or directory: 'MOCK_DATA.csv'
+
+2025-05-27 13:38:16,158 - code_interpreter - INFO - Interpreter busy status set to False.
+2025-05-27 13:38:16,159 - code_interpreter - INFO - Execution result being returned:
+---
+{
+  "success": false,
+  "output": [],
+  "error": "FileNotFoundError: [Errno 2] No such file or directory: 'MOCK_DATA.csv'\n\nTraceback (most recent call last):\n  File \"/Users/yeyu/Documents/client_project/onyx_doug/onyx_dev/onyx/code_interp_sandbox/app.py\", line 250, in execute_code\n    exec(request.code, exec_globals, interpreter.locals)\n  File \"<string>\", line 3, in <module>\n  File \"/Users/yeyu/Documents/client_project/onyx_doug/onyx_dev/onyx/code_interp_sandbox/env/lib/python3.11/site-packages/pandas/io/parsers/readers.py\", line 912, in read_csv\n    return _read(filepath_or_buffer, kwds)\n           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"/Users/yeyu/Documents/client_project/onyx_doug/onyx_dev/onyx/code_interp_sandbox/env/lib/python3.11/site-packages/pandas/io/parsers/readers.py\", line 577, in _read\n    parser = TextFileReader(filepath_or_buffer, **kwds)\n             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"/Users/yeyu/Documents/client_project/onyx_doug/onyx_dev/onyx/code_interp_sandbox/env/lib/python3.11/site-packages/pandas/io/parsers/readers.py\", line 1407, in __init__\n    self._engine = self._make_engine(f, self.engine)\n                   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"/Users/yeyu/Documents/client_project/onyx_doug/onyx_dev/onyx/code_interp_sandbox/env/lib/python3.11/site-packages/pandas/io/parsers/readers.py\", line 1661, in _make_engine\n    self.handles = get_handle(\n                   ^^^^^^^^^^^\n  File \"/Users/yeyu/Documents/client_project/onyx_doug/onyx_dev/onyx/code_interp_sandbox/env/lib/python3.11/site-packages/pandas/io/common.py\", line 859, in get_handle\n    handle = open(\n             ^^^^^\nFileNotFoundError: [Errno 2] No such file or directory: 'MOCK_DATA.csv'\n",
+  "execution_time": 0.001782
+}
+---
+2025-05-27 14:50:50,302 - code_interpreter - INFO - Execute endpoint called. Session ID: None
+2025-05-27 14:50:50,302 - code_interpreter - INFO - Code received for execution:
+---
+import pandas as pd
+
+data = pd.read_csv('MOCK_DATA.csv')
+male_count = data[data['gender'] == 'Male'].shape[0]
+male_count
+---
+2025-05-27 14:50:50,302 - code_interpreter - INFO - Cleared previous interpreter output and figures.
+2025-05-27 14:50:50,302 - code_interpreter - INFO - Detected 'pd' in code. Importing pandas.
+2025-05-27 14:50:50,302 - code_interpreter - INFO - Added 'Path' to execution globals.
+2025-05-27 14:50:50,302 - code_interpreter - INFO - Added 'json' to execution globals.
+2025-05-27 14:50:50,302 - code_interpreter - INFO - Added 'DATASETS_PATH' to execution globals: /Users/yeyu/Documents/client_project/onyx_doug/onyx_dev/onyx/code_interp_sandbox/datasets
+2025-05-27 14:50:50,302 - code_interpreter - INFO - Executing code...
+2025-05-27 14:50:50,305 - code_interpreter - ERROR - Code execution error: FileNotFoundError: [Errno 2] No such file or directory: 'MOCK_DATA.csv'
+Traceback (most recent call last):
+  File "/Users/yeyu/Documents/client_project/onyx_doug/onyx_dev/onyx/code_interp_sandbox/app.py", line 250, in execute_code
+    exec(request.code, exec_globals, interpreter.locals)
+  File "<string>", line 3, in <module>
+  File "/Users/yeyu/Documents/client_project/onyx_doug/onyx_dev/onyx/code_interp_sandbox/env/lib/python3.11/site-packages/pandas/io/parsers/readers.py", line 912, in read_csv
+    return _read(filepath_or_buffer, kwds)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/yeyu/Documents/client_project/onyx_doug/onyx_dev/onyx/code_interp_sandbox/env/lib/python3.11/site-packages/pandas/io/parsers/readers.py", line 577, in _read
+    parser = TextFileReader(filepath_or_buffer, **kwds)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/yeyu/Documents/client_project/onyx_doug/onyx_dev/onyx/code_interp_sandbox/env/lib/python3.11/site-packages/pandas/io/parsers/readers.py", line 1407, in __init__
+    self._engine = self._make_engine(f, self.engine)
+                   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/yeyu/Documents/client_project/onyx_doug/onyx_dev/onyx/code_interp_sandbox/env/lib/python3.11/site-packages/pandas/io/parsers/readers.py", line 1661, in _make_engine
+    self.handles = get_handle(
+                   ^^^^^^^^^^^
+  File "/Users/yeyu/Documents/client_project/onyx_doug/onyx_dev/onyx/code_interp_sandbox/env/lib/python3.11/site-packages/pandas/io/common.py", line 859, in get_handle
+    handle = open(
+             ^^^^^
+FileNotFoundError: [Errno 2] No such file or directory: 'MOCK_DATA.csv'
+
+2025-05-27 14:50:50,305 - code_interpreter - INFO - Interpreter busy status set to False.
+2025-05-27 14:50:50,305 - code_interpreter - INFO - Execution result being returned:
+---
+{
+  "success": false,
+  "output": [],
+  "error": "FileNotFoundError: [Errno 2] No such file or directory: 'MOCK_DATA.csv'\n\nTraceback (most recent call last):\n  File \"/Users/yeyu/Documents/client_project/onyx_doug/onyx_dev/onyx/code_interp_sandbox/app.py\", line 250, in execute_code\n    exec(request.code, exec_globals, interpreter.locals)\n  File \"<string>\", line 3, in <module>\n  File \"/Users/yeyu/Documents/client_project/onyx_doug/onyx_dev/onyx/code_interp_sandbox/env/lib/python3.11/site-packages/pandas/io/parsers/readers.py\", line 912, in read_csv\n    return _read(filepath_or_buffer, kwds)\n           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"/Users/yeyu/Documents/client_project/onyx_doug/onyx_dev/onyx/code_interp_sandbox/env/lib/python3.11/site-packages/pandas/io/parsers/readers.py\", line 577, in _read\n    parser = TextFileReader(filepath_or_buffer, **kwds)\n             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"/Users/yeyu/Documents/client_project/onyx_doug/onyx_dev/onyx/code_interp_sandbox/env/lib/python3.11/site-packages/pandas/io/parsers/readers.py\", line 1407, in __init__\n    self._engine = self._make_engine(f, self.engine)\n                   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"/Users/yeyu/Documents/client_project/onyx_doug/onyx_dev/onyx/code_interp_sandbox/env/lib/python3.11/site-packages/pandas/io/parsers/readers.py\", line 1661, in _make_engine\n    self.handles = get_handle(\n                   ^^^^^^^^^^^\n  File \"/Users/yeyu/Documents/client_project/onyx_doug/onyx_dev/onyx/code_interp_sandbox/env/lib/python3.11/site-packages/pandas/io/common.py\", line 859, in get_handle\n    handle = open(\n             ^^^^^\nFileNotFoundError: [Errno 2] No such file or directory: 'MOCK_DATA.csv'\n",
+  "execution_time": 0.002796
+}
+---
+2025-05-27 14:54:12,029 - code_interpreter - INFO - DATASETS_DIR set to: /Users/yeyu/Documents/client_project/onyx_doug/onyx_dev/onyx/code_interp_sandbox/datasets
+2025-05-27 14:54:12,030 - code_interpreter - INFO - Resetting interpreter state.
+2025-05-27 14:54:12,030 - code_interpreter - INFO - CodeInterpreterState initialized.
+2025-05-27 14:54:12,047 - code_interpreter - INFO - Starting Uvicorn server on port 8765...
+2025-05-27 14:54:12,304 - code_interpreter - INFO - DATASETS_DIR set to: /Users/yeyu/Documents/client_project/onyx_doug/onyx_dev/onyx/code_interp_sandbox/datasets
+2025-05-27 14:54:12,304 - code_interpreter - INFO - Resetting interpreter state.
+2025-05-27 14:54:12,304 - code_interpreter - INFO - CodeInterpreterState initialized.
+2025-05-27 14:54:12,331 - code_interpreter - INFO - DATASETS_DIR set to: /Users/yeyu/Documents/client_project/onyx_doug/onyx_dev/onyx/code_interp_sandbox/datasets
+2025-05-27 14:54:12,332 - code_interpreter - INFO - Resetting interpreter state.
+2025-05-27 14:54:12,332 - code_interpreter - INFO - CodeInterpreterState initialized.
+2025-05-27 14:58:35,622 - code_interpreter - INFO - Execute endpoint called. Session ID: None
+2025-05-27 14:58:35,623 - code_interpreter - INFO - Code received for execution:
+---
+import pandas as pd
+
+# Load CSV file
+df = pd.read_csv(DATASETS_PATH + '/uploaded_csv.csv')
+
+# Count the number of males
+gender_counts = df['gender'].value_counts()
+number_of_males = gender_counts.get('Male', 0)
+
+print(f'Number of males: {number_of_males}')
+---
+2025-05-27 14:58:35,623 - code_interpreter - INFO - Cleared previous interpreter output and figures.
+2025-05-27 14:58:35,623 - code_interpreter - INFO - Detected 'pd' in code. Importing pandas.
+2025-05-27 14:58:35,806 - code_interpreter - INFO - Added 'Path' to execution globals.
+2025-05-27 14:58:35,806 - code_interpreter - INFO - Added 'json' to execution globals.
+2025-05-27 14:58:35,806 - code_interpreter - INFO - Added 'DATASETS_PATH' to execution globals: /Users/yeyu/Documents/client_project/onyx_doug/onyx_dev/onyx/code_interp_sandbox/datasets
+2025-05-27 14:58:35,806 - code_interpreter - INFO - Executing code...
+2025-05-27 14:58:35,810 - code_interpreter - INFO - Captured print: Number of males: 1
+2025-05-27 14:58:35,811 - code_interpreter - INFO - Code execution finished.
+2025-05-27 14:58:35,968 - code_interpreter - INFO - Code executed successfully in 0.3449 seconds.
+2025-05-27 14:58:35,968 - code_interpreter - INFO - Interpreter busy status set to False.
+2025-05-27 14:58:35,968 - code_interpreter - INFO - Execution result being returned:
+---
+{
+  "success": true,
+  "output": [
+    {
+      "type": "stdout",
+      "data": "Number of males: 1\n"
+    }
+  ],
+  "error": null,
+  "execution_time": 0.344914
+}
+---
+2025-05-27 15:05:56,902 - code_interpreter - INFO - DATASETS_DIR set to: /Users/yeyu/Documents/client_project/onyx_doug/onyx_dev/onyx/code_interp_sandbox/datasets
+2025-05-27 15:05:56,902 - code_interpreter - INFO - Resetting interpreter state.
+2025-05-27 15:05:56,902 - code_interpreter - INFO - CodeInterpreterState initialized.
+2025-05-27 15:05:56,918 - code_interpreter - INFO - Starting Uvicorn server on port 8765...
+2025-05-27 15:05:57,248 - code_interpreter - INFO - DATASETS_DIR set to: /Users/yeyu/Documents/client_project/onyx_doug/onyx_dev/onyx/code_interp_sandbox/datasets
+2025-05-27 15:05:57,249 - code_interpreter - INFO - Resetting interpreter state.
+2025-05-27 15:05:57,249 - code_interpreter - INFO - CodeInterpreterState initialized.
+2025-05-27 15:05:57,270 - code_interpreter - INFO - DATASETS_DIR set to: /Users/yeyu/Documents/client_project/onyx_doug/onyx_dev/onyx/code_interp_sandbox/datasets
+2025-05-27 15:05:57,270 - code_interpreter - INFO - Resetting interpreter state.
+2025-05-27 15:05:57,270 - code_interpreter - INFO - CodeInterpreterState initialized.
+2025-05-27 15:06:26,681 - code_interpreter - INFO - Execute endpoint called. Session ID: None
+2025-05-27 15:06:26,681 - code_interpreter - INFO - Code received for execution:
+---
+import pandas as pd
+
+# Load CSV file: MOCK_DATA.csv
+df = pd.read_csv(DATASETS_PATH + '/MOCK_DATA.csv')
+
+# Count the number of females in the dataset
+female_count = df[df['gender'] == 'Female'].shape[0]
+print(f'Number of females: {female_count}')
+---
+2025-05-27 15:06:26,682 - code_interpreter - INFO - Cleared previous interpreter output and figures.
+2025-05-27 15:06:26,682 - code_interpreter - INFO - Detected 'pd' in code. Importing pandas.
+2025-05-27 15:06:26,983 - code_interpreter - INFO - Added 'Path' to execution globals.
+2025-05-27 15:06:26,983 - code_interpreter - INFO - Added 'json' to execution globals.
+2025-05-27 15:06:26,983 - code_interpreter - INFO - Added 'DATASETS_PATH' to execution globals: /Users/yeyu/Documents/client_project/onyx_doug/onyx_dev/onyx/code_interp_sandbox/datasets
+2025-05-27 15:06:26,984 - code_interpreter - INFO - Executing code...
+2025-05-27 15:06:26,988 - code_interpreter - INFO - Captured print: Number of females: 1
+2025-05-27 15:06:26,988 - code_interpreter - INFO - Code execution finished.
+2025-05-27 15:06:27,128 - code_interpreter - INFO - Code executed successfully in 0.4460 seconds.
+2025-05-27 15:06:27,128 - code_interpreter - INFO - Interpreter busy status set to False.
+2025-05-27 15:06:27,128 - code_interpreter - INFO - Execution result being returned:
+---
+{
+  "success": true,
+  "output": [
+    {
+      "type": "stdout",
+      "data": "Number of females: 1\n"
+    }
+  ],
+  "error": null,
+  "execution_time": 0.445991
+}
+---
+2025-05-27 15:11:01,113 - code_interpreter - INFO - DATASETS_DIR set to: /Users/yeyu/Documents/client_project/onyx_doug/onyx_dev/onyx/code_interp_sandbox/datasets
+2025-05-27 15:11:01,113 - code_interpreter - INFO - Resetting interpreter state.
+2025-05-27 15:11:01,113 - code_interpreter - INFO - CodeInterpreterState initialized.
+2025-05-27 15:11:01,129 - code_interpreter - INFO - Starting Uvicorn server on port 8765...
+2025-05-27 15:11:01,480 - code_interpreter - INFO - DATASETS_DIR set to: /Users/yeyu/Documents/client_project/onyx_doug/onyx_dev/onyx/code_interp_sandbox/datasets
+2025-05-27 15:11:01,480 - code_interpreter - INFO - Resetting interpreter state.
+2025-05-27 15:11:01,480 - code_interpreter - INFO - CodeInterpreterState initialized.
+2025-05-27 15:11:01,504 - code_interpreter - INFO - DATASETS_DIR set to: /Users/yeyu/Documents/client_project/onyx_doug/onyx_dev/onyx/code_interp_sandbox/datasets
+2025-05-27 15:11:01,505 - code_interpreter - INFO - Resetting interpreter state.
+2025-05-27 15:11:01,505 - code_interpreter - INFO - CodeInterpreterState initialized.
+2025-05-27 15:11:42,115 - code_interpreter - INFO - Execute endpoint called. Session ID: None
+2025-05-27 15:11:42,115 - code_interpreter - INFO - Code received for execution:
+---
+import pandas as pd
+
+# Load CSV file
+df = pd.read_csv(DATASETS_PATH + '/MOCK_DATA.csv')
+
+# Count the number of males
+gender_counts = df['gender'].value_counts()
+number_of_males = gender_counts.get('Male', 0)
+
+print(f'Number of males: {number_of_males}')
+---
+2025-05-27 15:11:42,115 - code_interpreter - INFO - Cleared previous interpreter output and figures.
+2025-05-27 15:11:42,115 - code_interpreter - INFO - Detected 'pd' in code. Importing pandas.
+2025-05-27 15:11:42,297 - code_interpreter - INFO - Added 'Path' to execution globals.
+2025-05-27 15:11:42,297 - code_interpreter - INFO - Added 'json' to execution globals.
+2025-05-27 15:11:42,297 - code_interpreter - INFO - Added 'DATASETS_PATH' to execution globals: /Users/yeyu/Documents/client_project/onyx_doug/onyx_dev/onyx/code_interp_sandbox/datasets
+2025-05-27 15:11:42,297 - code_interpreter - INFO - Executing code...
+2025-05-27 15:11:42,301 - code_interpreter - INFO - Captured print: Number of males: 1
+2025-05-27 15:11:42,301 - code_interpreter - INFO - Code execution finished.
+2025-05-27 15:11:42,418 - code_interpreter - INFO - Code executed successfully in 0.3029 seconds.
+2025-05-27 15:11:42,418 - code_interpreter - INFO - Interpreter busy status set to False.
+2025-05-27 15:11:42,418 - code_interpreter - INFO - Execution result being returned:
+---
+{
+  "success": true,
+  "output": [
+    {
+      "type": "stdout",
+      "data": "Number of males: 1\n"
+    }
+  ],
+  "error": null,
+  "execution_time": 0.302854
+}
+---
+2025-05-27 15:13:30,368 - code_interpreter - INFO - Execute endpoint called. Session ID: None
+2025-05-27 15:13:30,368 - code_interpreter - INFO - Code received for execution:
+---
+import pandas as pd
+
+# Load the CSV file
+df = pd.read_csv(DATASETS_PATH + '/MOCK_DATA.csv')
+
+# Count the number of females
+gender_counts = df['gender'].value_counts()
+number_of_females = gender_counts.get('Female', 0)
+
+print(f'Number of females: {number_of_females}')
+---
+2025-05-27 15:13:30,368 - code_interpreter - INFO - Cleared previous interpreter output and figures.
+2025-05-27 15:13:30,368 - code_interpreter - INFO - Detected 'pd' in code. Importing pandas.
+2025-05-27 15:13:30,368 - code_interpreter - INFO - Added 'Path' to execution globals.
+2025-05-27 15:13:30,368 - code_interpreter - INFO - Added 'json' to execution globals.
+2025-05-27 15:13:30,368 - code_interpreter - INFO - Added 'DATASETS_PATH' to execution globals: /Users/yeyu/Documents/client_project/onyx_doug/onyx_dev/onyx/code_interp_sandbox/datasets
+2025-05-27 15:13:30,368 - code_interpreter - INFO - Executing code...
+2025-05-27 15:13:30,371 - code_interpreter - INFO - Captured print: Number of females: 1
+2025-05-27 15:13:30,371 - code_interpreter - INFO - Code execution finished.
+2025-05-27 15:13:30,371 - code_interpreter - INFO - Code executed successfully in 0.0031 seconds.
+2025-05-27 15:13:30,372 - code_interpreter - INFO - Interpreter busy status set to False.
+2025-05-27 15:13:30,372 - code_interpreter - INFO - Execution result being returned:
+---
+{
+  "success": true,
+  "output": [
+    {
+      "type": "stdout",
+      "data": "Number of females: 1\n"
+    }
+  ],
+  "error": null,
+  "execution_time": 0.003103
+}
+---
+2025-05-27 15:14:30,205 - code_interpreter - INFO - Execute endpoint called. Session ID: None
+2025-05-27 15:14:30,205 - code_interpreter - INFO - Code received for execution:
+---
+import pandas as pd
+
+# Load CSV file: MOCK_DATA (1).csv
+df = pd.read_csv(DATASETS_PATH + '/MOCK_DATA (1).csv')
+
+# Get the number of unique airlines
+unique_airlines = df['airline_name'].nunique()
+print(f'Number of unique airlines: {unique_airlines}')
+---
+2025-05-27 15:14:30,205 - code_interpreter - INFO - Cleared previous interpreter output and figures.
+2025-05-27 15:14:30,205 - code_interpreter - INFO - Detected 'pd' in code. Importing pandas.
+2025-05-27 15:14:30,205 - code_interpreter - INFO - Added 'Path' to execution globals.
+2025-05-27 15:14:30,206 - code_interpreter - INFO - Added 'json' to execution globals.
+2025-05-27 15:14:30,206 - code_interpreter - INFO - Added 'DATASETS_PATH' to execution globals: /Users/yeyu/Documents/client_project/onyx_doug/onyx_dev/onyx/code_interp_sandbox/datasets
+2025-05-27 15:14:30,206 - code_interpreter - INFO - Executing code...
+2025-05-27 15:14:30,216 - code_interpreter - ERROR - Code execution error: KeyError: 'airline_name'
+Traceback (most recent call last):
+  File "/Users/yeyu/Documents/client_project/onyx_doug/onyx_dev/onyx/code_interp_sandbox/env/lib/python3.11/site-packages/pandas/core/indexes/base.py", line 3653, in get_loc
+    return self._engine.get_loc(casted_key)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "pandas/_libs/index.pyx", line 147, in pandas._libs.index.IndexEngine.get_loc
+  File "pandas/_libs/index.pyx", line 176, in pandas._libs.index.IndexEngine.get_loc
+  File "pandas/_libs/hashtable_class_helper.pxi", line 7080, in pandas._libs.hashtable.PyObjectHashTable.get_item
+  File "pandas/_libs/hashtable_class_helper.pxi", line 7088, in pandas._libs.hashtable.PyObjectHashTable.get_item
+KeyError: 'airline_name'
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "/Users/yeyu/Documents/client_project/onyx_doug/onyx_dev/onyx/code_interp_sandbox/app.py", line 250, in execute_code
+    exec(request.code, exec_globals, interpreter.locals)
+  File "<string>", line 7, in <module>
+  File "/Users/yeyu/Documents/client_project/onyx_doug/onyx_dev/onyx/code_interp_sandbox/env/lib/python3.11/site-packages/pandas/core/frame.py", line 3761, in __getitem__
+    indexer = self.columns.get_loc(key)
+              ^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/yeyu/Documents/client_project/onyx_doug/onyx_dev/onyx/code_interp_sandbox/env/lib/python3.11/site-packages/pandas/core/indexes/base.py", line 3655, in get_loc
+    raise KeyError(key) from err
+KeyError: 'airline_name'
+
+2025-05-27 15:14:30,216 - code_interpreter - INFO - Interpreter busy status set to False.
+2025-05-27 15:14:30,216 - code_interpreter - INFO - Execution result being returned:
+---
+{
+  "success": false,
+  "output": [],
+  "error": "KeyError: 'airline_name'\n\nTraceback (most recent call last):\n  File \"/Users/yeyu/Documents/client_project/onyx_doug/onyx_dev/onyx/code_interp_sandbox/env/lib/python3.11/site-packages/pandas/core/indexes/base.py\", line 3653, in get_loc\n    return self._engine.get_loc(casted_key)\n           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"pandas/_libs/index.pyx\", line 147, in pandas._libs.index.IndexEngine.get_loc\n  File \"pandas/_libs/index.pyx\", line 176, in pandas._libs.index.IndexEngine.get_loc\n  File \"pandas/_libs/hashtable_class_helper.pxi\", line 7080, in pandas._libs.hashtable.PyObjectHashTable.get_item\n  File \"pandas/_libs/hashtable_class_helper.pxi\", line 7088, in pandas._libs.hashtable.PyObjectHashTable.get_item\nKeyError: 'airline_name'\n\nThe above exception was the direct cause of the following exception:\n\nTraceback (most recent call last):\n  File \"/Users/yeyu/Documents/client_project/onyx_doug/onyx_dev/onyx/code_interp_sandbox/app.py\", line 250, in execute_code\n    exec(request.code, exec_globals, interpreter.locals)\n  File \"<string>\", line 7, in <module>\n  File \"/Users/yeyu/Documents/client_project/onyx_doug/onyx_dev/onyx/code_interp_sandbox/env/lib/python3.11/site-packages/pandas/core/frame.py\", line 3761, in __getitem__\n    indexer = self.columns.get_loc(key)\n              ^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"/Users/yeyu/Documents/client_project/onyx_doug/onyx_dev/onyx/code_interp_sandbox/env/lib/python3.11/site-packages/pandas/core/indexes/base.py\", line 3655, in get_loc\n    raise KeyError(key) from err\nKeyError: 'airline_name'\n",
+  "execution_time": 0.010858
+}
+---
+2025-05-27 15:19:49,047 - code_interpreter - INFO - Execute endpoint called. Session ID: None
+2025-05-27 15:19:49,047 - code_interpreter - INFO - Code received for execution:
+---
+import pandas as pd
+
+# Load the CSV file
+df = pd.read_csv(DATASETS_PATH + '/MOCK_DATA.csv')
+
+# Count the number of males
+gender_counts = df['gender'].value_counts()
+number_of_males = gender_counts.get('Male', 0)
+
+print(f'Number of males: {number_of_males}')
+---
+2025-05-27 15:19:49,047 - code_interpreter - INFO - Cleared previous interpreter output and figures.
+2025-05-27 15:19:49,048 - code_interpreter - INFO - Detected 'pd' in code. Importing pandas.
+2025-05-27 15:19:49,048 - code_interpreter - INFO - Added 'Path' to execution globals.
+2025-05-27 15:19:49,048 - code_interpreter - INFO - Added 'json' to execution globals.
+2025-05-27 15:19:49,048 - code_interpreter - INFO - Added 'DATASETS_PATH' to execution globals: /Users/yeyu/Documents/client_project/onyx_doug/onyx_dev/onyx/code_interp_sandbox/datasets
+2025-05-27 15:19:49,048 - code_interpreter - INFO - Executing code...
+2025-05-27 15:19:49,058 - code_interpreter - INFO - Captured print: Number of males: 432
+2025-05-27 15:19:49,058 - code_interpreter - INFO - Code execution finished.
+2025-05-27 15:19:49,058 - code_interpreter - INFO - Code executed successfully in 0.0111 seconds.
+2025-05-27 15:19:49,059 - code_interpreter - INFO - Interpreter busy status set to False.
+2025-05-27 15:19:49,059 - code_interpreter - INFO - Execution result being returned:
+---
+{
+  "success": true,
+  "output": [
+    {
+      "type": "stdout",
+      "data": "Number of males: 432\n"
+    }
+  ],
+  "error": null,
+  "execution_time": 0.011073
+}
+---
+2025-05-27 16:32:14,022 - code_interpreter - INFO - Execute endpoint called. Session ID: None
+2025-05-27 16:32:14,022 - code_interpreter - INFO - Code received for execution:
+---
+import pandas as pd
+
+# Load CSV file: MOCK_DATA (1).csv
+df = pd.read_csv(DATASETS_PATH + '/MOCK_DATA (1).csv')
+
+# Group by airline_name and sum the duration_hours to find the airline with the longest total duration
+total_duration_by_airline = df.groupby('airline_name')['duration_hours'].sum()
+
+# Find the airline with the maximum total duration
+longest_duration_airline = total_duration_by_airline.idxmax()
+longest_duration_value = total_duration_by_airline.max()
+
+print(f'Airline with the longest total duration: {longest_duration_airline}')
+print(f'Total duration hours: {longest_duration_value}')
+---
+2025-05-27 16:32:14,022 - code_interpreter - INFO - Cleared previous interpreter output and figures.
+2025-05-27 16:32:14,022 - code_interpreter - INFO - Detected 'pd' in code. Importing pandas.
+2025-05-27 16:32:14,022 - code_interpreter - INFO - Added 'Path' to execution globals.
+2025-05-27 16:32:14,022 - code_interpreter - INFO - Added 'json' to execution globals.
+2025-05-27 16:32:14,022 - code_interpreter - INFO - Added 'DATASETS_PATH' to execution globals: /Users/yeyu/Documents/client_project/onyx_doug/onyx_dev/onyx/code_interp_sandbox/datasets
+2025-05-27 16:32:14,022 - code_interpreter - INFO - Executing code...
+2025-05-27 16:32:14,034 - code_interpreter - INFO - Captured print: Airline with the longest total duration: Air New Zealand
+2025-05-27 16:32:14,035 - code_interpreter - INFO - Captured print: Total duration hours: 629
+2025-05-27 16:32:14,035 - code_interpreter - INFO - Code execution finished.
+2025-05-27 16:32:14,035 - code_interpreter - INFO - Code executed successfully in 0.0123 seconds.
+2025-05-27 16:32:14,035 - code_interpreter - INFO - Interpreter busy status set to False.
+2025-05-27 16:32:14,035 - code_interpreter - INFO - Execution result being returned:
+---
+{
+  "success": true,
+  "output": [
+    {
+      "type": "stdout",
+      "data": "Airline with the longest total duration: Air New Zealand\n"
+    },
+    {
+      "type": "stdout",
+      "data": "Total duration hours: 629\n"
+    }
+  ],
+  "error": null,
+  "execution_time": 0.012302
+}
+---

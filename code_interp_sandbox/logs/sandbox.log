@@ -1,0 +1,119 @@
+2025-05-27 01:02:16,789 [INFO] ============================================================
+2025-05-27 01:02:16,789 [INFO] Starting Code Execution Sandbox Service...
+2025-05-27 01:02:16,789 [INFO] ============================================================
+2025-05-27 01:02:16,789 [INFO] Sandbox directory: /Users/yeyu/Documents/client_project/onyx_doug/onyx_dev/onyx/code_interp_sandbox
+2025-05-27 01:02:16,789 [INFO] Datasets directory: /Users/yeyu/Documents/client_project/onyx_doug/onyx_dev/onyx/code_interp_sandbox/datasets
+2025-05-27 01:02:16,789 [INFO] Logs directory: /Users/yeyu/Documents/client_project/onyx_doug/onyx_dev/onyx/code_interp_sandbox/logs
+2025-05-27 01:02:16,789 [INFO] Log file: /Users/yeyu/Documents/client_project/onyx_doug/onyx_dev/onyx/code_interp_sandbox/logs/sandbox.log
+2025-05-27 01:02:16,789 [INFO] Available datasets: 1
+2025-05-27 01:02:16,789 [INFO]   - MOCK_DATA (1).csv (92.3 KB)
+2025-05-27 01:02:16,789 [INFO] All API requests and responses will be logged
+2025-05-27 01:02:16,790 [INFO] ============================================================
+2025-05-27 01:02:16,790 [INFO] Starting Flask server on port 5050...
+2025-05-27 01:02:16,794 [INFO] [31m[1mWARNING: This is a development server. Do not use it in a production deployment. Use a production WSGI server instead.[0m
+ * Running on all addresses (0.0.0.0)
+ * Running on http://127.0.0.1:5050
+ * Running on http://26.26.26.1:5050
+2025-05-27 01:02:16,794 [INFO] [33mPress CTRL+C to quit[0m
+2025-05-27 01:18:36,042 [INFO] REQUEST: GET /health - Headers: {'Host': 'localhost:5050', 'User-Agent': 'python-requests/2.32.2', 'Accept-Encoding': 'gzip, deflate, zstd', 'Accept': '*/*', 'Connection': 'keep-alive'} - Data: 
+2025-05-27 01:18:36,043 [INFO] Health check requested
+2025-05-27 01:18:36,043 [INFO] Health check result: ok
+2025-05-27 01:18:36,043 [INFO] RESPONSE: GET /health - Status: 200 - Duration: 0.002s - Data: {"checks":{"datasets_directory_readable":true,"temp_directory_writable":true},"service":"code-execution-sandbox","status":"ok","timestamp":"2025-05-27T01:18:36.043155"}
+
+2025-05-27 01:18:36,044 [INFO] 127.0.0.1 - - [27/May/2025 01:18:36] "GET /health HTTP/1.1" 200 -
+2025-05-27 01:18:57,970 [INFO] REQUEST: GET /health - Headers: {'Host': 'localhost:5050', 'User-Agent': 'python-requests/2.32.2', 'Accept-Encoding': 'gzip, deflate, zstd', 'Accept': '*/*', 'Connection': 'keep-alive'} - Data: 
+2025-05-27 01:18:57,970 [INFO] Health check requested
+2025-05-27 01:18:57,970 [INFO] Health check result: ok
+2025-05-27 01:18:57,970 [INFO] RESPONSE: GET /health - Status: 200 - Duration: 0.000s - Data: {"checks":{"datasets_directory_readable":true,"temp_directory_writable":true},"service":"code-execution-sandbox","status":"ok","timestamp":"2025-05-27T01:18:57.970305"}
+
+2025-05-27 01:18:57,970 [INFO] 127.0.0.1 - - [27/May/2025 01:18:57] "GET /health HTTP/1.1" 200 -
+2025-05-27 01:19:11,444 [INFO] REQUEST: GET /health - Headers: {'Host': 'localhost:5050', 'User-Agent': 'python-requests/2.32.2', 'Accept-Encoding': 'gzip, deflate, zstd', 'Accept': '*/*', 'Connection': 'keep-alive'} - Data: 
+2025-05-27 01:19:11,444 [INFO] Health check requested
+2025-05-27 01:19:11,444 [INFO] Health check result: ok
+2025-05-27 01:19:11,444 [INFO] RESPONSE: GET /health - Status: 200 - Duration: 0.000s - Data: {"checks":{"datasets_directory_readable":true,"temp_directory_writable":true},"service":"code-execution-sandbox","status":"ok","timestamp":"2025-05-27T01:19:11.444855"}
+
+2025-05-27 01:19:11,444 [INFO] 127.0.0.1 - - [27/May/2025 01:19:11] "GET /health HTTP/1.1" 200 -
+2025-05-27 01:19:43,664 [INFO] REQUEST: GET /health - Headers: {'Host': 'localhost:5050', 'User-Agent': 'python-requests/2.32.2', 'Accept-Encoding': 'gzip, deflate, zstd', 'Accept': '*/*', 'Connection': 'keep-alive'} - Data: 
+2025-05-27 01:19:43,664 [INFO] Health check requested
+2025-05-27 01:19:43,664 [INFO] Health check result: ok
+2025-05-27 01:19:43,664 [INFO] RESPONSE: GET /health - Status: 200 - Duration: 0.000s - Data: {"checks":{"datasets_directory_readable":true,"temp_directory_writable":true},"service":"code-execution-sandbox","status":"ok","timestamp":"2025-05-27T01:19:43.664594"}
+
+2025-05-27 01:19:43,664 [INFO] 127.0.0.1 - - [27/May/2025 01:19:43] "GET /health HTTP/1.1" 200 -
+2025-05-27 01:20:03,629 [INFO] REQUEST: GET /health - Headers: {'Host': 'localhost:5050', 'User-Agent': 'python-requests/2.32.2', 'Accept-Encoding': 'gzip, deflate, zstd', 'Accept': '*/*', 'Connection': 'keep-alive'} - Data: 
+2025-05-27 01:20:03,629 [INFO] Health check requested
+2025-05-27 01:20:03,630 [INFO] Health check result: ok
+2025-05-27 01:20:03,630 [INFO] RESPONSE: GET /health - Status: 200 - Duration: 0.000s - Data: {"checks":{"datasets_directory_readable":true,"temp_directory_writable":true},"service":"code-execution-sandbox","status":"ok","timestamp":"2025-05-27T01:20:03.630014"}
+
+2025-05-27 01:20:03,630 [INFO] 127.0.0.1 - - [27/May/2025 01:20:03] "GET /health HTTP/1.1" 200 -
+2025-05-27 01:20:51,687 [INFO] REQUEST: GET /health - Headers: {'Host': 'localhost:5050', 'User-Agent': 'python-requests/2.32.2', 'Accept-Encoding': 'gzip, deflate, zstd', 'Accept': '*/*', 'Connection': 'keep-alive'} - Data: 
+2025-05-27 01:20:51,687 [INFO] Health check requested
+2025-05-27 01:20:51,687 [INFO] Health check result: ok
+2025-05-27 01:20:51,687 [INFO] RESPONSE: GET /health - Status: 200 - Duration: 0.000s - Data: {"checks":{"datasets_directory_readable":true,"temp_directory_writable":true},"service":"code-execution-sandbox","status":"ok","timestamp":"2025-05-27T01:20:51.687673"}
+
+2025-05-27 01:20:51,687 [INFO] 127.0.0.1 - - [27/May/2025 01:20:51] "GET /health HTTP/1.1" 200 -
+2025-05-27 01:21:17,724 [INFO] REQUEST: GET /health - Headers: {'Host': 'localhost:5050', 'User-Agent': 'python-requests/2.32.2', 'Accept-Encoding': 'gzip, deflate, zstd', 'Accept': '*/*', 'Connection': 'keep-alive'} - Data: 
+2025-05-27 01:21:17,725 [INFO] Health check requested
+2025-05-27 01:21:17,725 [INFO] Health check result: ok
+2025-05-27 01:21:17,725 [INFO] RESPONSE: GET /health - Status: 200 - Duration: 0.001s - Data: {"checks":{"datasets_directory_readable":true,"temp_directory_writable":true},"service":"code-execution-sandbox","status":"ok","timestamp":"2025-05-27T01:21:17.725389"}
+
+2025-05-27 01:21:17,725 [INFO] 127.0.0.1 - - [27/May/2025 01:21:17] "GET /health HTTP/1.1" 200 -
+2025-05-27 01:23:14,182 [INFO] REQUEST: GET /health - Headers: {'Host': 'localhost:5050', 'User-Agent': 'python-requests/2.32.2', 'Accept-Encoding': 'gzip, deflate, zstd', 'Accept': '*/*', 'Connection': 'keep-alive'} - Data: 
+2025-05-27 01:23:14,182 [INFO] Health check requested
+2025-05-27 01:23:14,182 [INFO] Health check result: ok
+2025-05-27 01:23:14,182 [INFO] RESPONSE: GET /health - Status: 200 - Duration: 0.000s - Data: {"checks":{"datasets_directory_readable":true,"temp_directory_writable":true},"service":"code-execution-sandbox","status":"ok","timestamp":"2025-05-27T01:23:14.182632"}
+
+2025-05-27 01:23:14,182 [INFO] 127.0.0.1 - - [27/May/2025 01:23:14] "GET /health HTTP/1.1" 200 -
+2025-05-27 01:23:51,424 [INFO] REQUEST: GET /health - Headers: {'Host': 'localhost:5050', 'User-Agent': 'python-requests/2.32.2', 'Accept-Encoding': 'gzip, deflate, zstd', 'Accept': '*/*', 'Connection': 'keep-alive'} - Data: 
+2025-05-27 01:23:51,424 [INFO] Health check requested
+2025-05-27 01:23:51,425 [INFO] Health check result: ok
+2025-05-27 01:23:51,425 [INFO] RESPONSE: GET /health - Status: 200 - Duration: 0.001s - Data: {"checks":{"datasets_directory_readable":true,"temp_directory_writable":true},"service":"code-execution-sandbox","status":"ok","timestamp":"2025-05-27T01:23:51.425485"}
+
+2025-05-27 01:23:51,426 [INFO] 127.0.0.1 - - [27/May/2025 01:23:51] "GET /health HTTP/1.1" 200 -
+2025-05-27 01:25:55,052 [INFO] REQUEST: GET /health - Headers: {'Host': 'localhost:5050', 'User-Agent': 'python-requests/2.32.2', 'Accept-Encoding': 'gzip, deflate, zstd', 'Accept': '*/*', 'Connection': 'keep-alive'} - Data: 
+2025-05-27 01:25:55,052 [INFO] Health check requested
+2025-05-27 01:25:55,052 [INFO] Health check result: ok
+2025-05-27 01:25:55,053 [INFO] RESPONSE: GET /health - Status: 200 - Duration: 0.000s - Data: {"checks":{"datasets_directory_readable":true,"temp_directory_writable":true},"service":"code-execution-sandbox","status":"ok","timestamp":"2025-05-27T01:25:55.052970"}
+
+2025-05-27 01:25:55,053 [INFO] 127.0.0.1 - - [27/May/2025 01:25:55] "GET /health HTTP/1.1" 200 -
+2025-05-27 01:26:14,708 [INFO] REQUEST: GET /health - Headers: {'Host': 'localhost:5050', 'User-Agent': 'python-requests/2.32.2', 'Accept-Encoding': 'gzip, deflate, zstd', 'Accept': '*/*', 'Connection': 'keep-alive'} - Data: 
+2025-05-27 01:26:14,708 [INFO] Health check requested
+2025-05-27 01:26:14,708 [INFO] Health check result: ok
+2025-05-27 01:26:14,708 [INFO] RESPONSE: GET /health - Status: 200 - Duration: 0.000s - Data: {"checks":{"datasets_directory_readable":true,"temp_directory_writable":true},"service":"code-execution-sandbox","status":"ok","timestamp":"2025-05-27T01:26:14.708320"}
+
+2025-05-27 01:26:14,708 [INFO] 127.0.0.1 - - [27/May/2025 01:26:14] "GET /health HTTP/1.1" 200 -
+2025-05-27 01:28:00,931 [INFO] REQUEST: GET /health - Headers: {'Host': 'localhost:5050', 'User-Agent': 'python-requests/2.32.2', 'Accept-Encoding': 'gzip, deflate, zstd', 'Accept': '*/*', 'Connection': 'keep-alive'} - Data: 
+2025-05-27 01:28:00,932 [INFO] Health check requested
+2025-05-27 01:28:00,932 [INFO] Health check result: ok
+2025-05-27 01:28:00,932 [INFO] RESPONSE: GET /health - Status: 200 - Duration: 0.000s - Data: {"checks":{"datasets_directory_readable":true,"temp_directory_writable":true},"service":"code-execution-sandbox","status":"ok","timestamp":"2025-05-27T01:28:00.932125"}
+
+2025-05-27 01:28:00,932 [INFO] 127.0.0.1 - - [27/May/2025 01:28:00] "GET /health HTTP/1.1" 200 -
+2025-05-27 01:28:47,152 [INFO] REQUEST: GET /health - Headers: {'Host': 'localhost:5050', 'User-Agent': 'python-requests/2.32.2', 'Accept-Encoding': 'gzip, deflate, zstd', 'Accept': '*/*', 'Connection': 'keep-alive'} - Data: 
+2025-05-27 01:28:47,154 [INFO] Health check requested
+2025-05-27 01:28:47,155 [INFO] Health check result: ok
+2025-05-27 01:28:47,155 [INFO] RESPONSE: GET /health - Status: 200 - Duration: 0.004s - Data: {"checks":{"datasets_directory_readable":true,"temp_directory_writable":true},"service":"code-execution-sandbox","status":"ok","timestamp":"2025-05-27T01:28:47.155355"}
+
+2025-05-27 01:28:47,156 [INFO] 127.0.0.1 - - [27/May/2025 01:28:47] "GET /health HTTP/1.1" 200 -
+2025-05-27 01:56:30,298 [INFO] REQUEST: GET /health - Headers: {'Host': 'localhost:5050', 'User-Agent': 'python-requests/2.32.2', 'Accept-Encoding': 'gzip, deflate, zstd', 'Accept': '*/*', 'Connection': 'keep-alive'} - Data: 
+2025-05-27 01:56:30,299 [INFO] Health check requested
+2025-05-27 01:56:30,299 [INFO] Health check result: ok
+2025-05-27 01:56:30,299 [INFO] RESPONSE: GET /health - Status: 200 - Duration: 0.001s - Data: {"checks":{"datasets_directory_readable":true,"temp_directory_writable":true},"service":"code-execution-sandbox","status":"ok","timestamp":"2025-05-27T01:56:30.299363"}
+
+2025-05-27 01:56:30,300 [INFO] 127.0.0.1 - - [27/May/2025 01:56:30] "GET /health HTTP/1.1" 200 -
+2025-05-27 02:02:52,014 [INFO] REQUEST: GET /health - Headers: {'Host': 'localhost:5050', 'User-Agent': 'python-requests/2.32.2', 'Accept-Encoding': 'gzip, deflate, zstd', 'Accept': '*/*', 'Connection': 'keep-alive'} - Data: 
+2025-05-27 02:02:52,015 [INFO] Health check requested
+2025-05-27 02:02:52,015 [INFO] Health check result: ok
+2025-05-27 02:02:52,016 [INFO] RESPONSE: GET /health - Status: 200 - Duration: 0.001s - Data: {"checks":{"datasets_directory_readable":true,"temp_directory_writable":true},"service":"code-execution-sandbox","status":"ok","timestamp":"2025-05-27T02:02:52.015719"}
+
+2025-05-27 02:02:52,016 [INFO] 127.0.0.1 - - [27/May/2025 02:02:52] "GET /health HTTP/1.1" 200 -
+2025-05-27 02:06:34,039 [INFO] REQUEST: GET /health - Headers: {'Host': 'localhost:5050', 'User-Agent': 'python-requests/2.32.2', 'Accept-Encoding': 'gzip, deflate, zstd', 'Accept': '*/*', 'Connection': 'keep-alive'} - Data: 
+2025-05-27 02:06:34,040 [INFO] Health check requested
+2025-05-27 02:06:34,040 [INFO] Health check result: ok
+2025-05-27 02:06:34,040 [INFO] RESPONSE: GET /health - Status: 200 - Duration: 0.001s - Data: {"checks":{"datasets_directory_readable":true,"temp_directory_writable":true},"service":"code-execution-sandbox","status":"ok","timestamp":"2025-05-27T02:06:34.040633"}
+
+2025-05-27 02:06:34,041 [INFO] 127.0.0.1 - - [27/May/2025 02:06:34] "GET /health HTTP/1.1" 200 -
+2025-05-27 02:08:12,691 [INFO] REQUEST: GET /health - Headers: {'Host': 'localhost:5050', 'User-Agent': 'python-requests/2.32.2', 'Accept-Encoding': 'gzip, deflate, zstd', 'Accept': '*/*', 'Connection': 'keep-alive'} - Data: 
+2025-05-27 02:08:12,691 [INFO] Health check requested
+2025-05-27 02:08:12,691 [INFO] Health check result: ok
+2025-05-27 02:08:12,692 [INFO] RESPONSE: GET /health - Status: 200 - Duration: 0.001s - Data: {"checks":{"datasets_directory_readable":true,"temp_directory_writable":true},"service":"code-execution-sandbox","status":"ok","timestamp":"2025-05-27T02:08:12.691829"}
+
+2025-05-27 02:08:12,692 [INFO] 127.0.0.1 - - [27/May/2025 02:08:12] "GET /health HTTP/1.1" 200 -

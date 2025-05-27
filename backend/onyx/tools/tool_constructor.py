@@ -1,5 +1,6 @@
 from typing import cast
 from uuid import UUID
+import os
 
 from pydantic import BaseModel
 from pydantic import Field
@@ -29,6 +30,9 @@ from onyx.natural_language_processing.utils import get_tokenizer
 from onyx.tools.built_in_tools import get_built_in_tool_by_id
 from onyx.tools.models import DynamicSchemaInfo
 from onyx.tools.tool import Tool
+from onyx.tools.tool_implementations.code_interpreter.code_interpreter_tool import (
+    CodeInterpreterTool,
+)
 from onyx.tools.tool_implementations.custom.custom_tool import (
     build_custom_tools_from_openapi_schema_and_headers,
 )
@@ -39,6 +43,7 @@ from onyx.tools.tool_implementations.internet_search.internet_search_tool import
     InternetSearchTool,
 )
 from onyx.tools.tool_implementations.search.search_tool import SearchTool
+from onyx.tools.tool_implementations.weather.weather_tool import WeatherTool
 from onyx.tools.utils import compute_all_tool_tokens
 from onyx.tools.utils import explicit_tool_calling_supported
 from onyx.utils.headers import header_dict_to_header_list
@@ -134,6 +139,18 @@ class CustomToolConfig(BaseModel):
     additional_headers: dict[str, str] | None = None
 
 
+class WeatherToolConfig(BaseModel):
+    """Configuration for the weather tool."""
+    pass
+
+
+class CodeInterpreterToolConfig(BaseModel):
+    """Configuration for the code interpreter tool."""
+    api_url: str = Field(
+        default_factory=lambda: os.environ.get("CODE_INTERPRETER_URL", "http://localhost:8765")
+    )
+
+
 def construct_tools(
     persona: Persona,
     prompt_config: PromptConfig,
@@ -146,6 +163,7 @@ def construct_tools(
     internet_search_tool_config: InternetSearchToolConfig | None = None,
     image_generation_tool_config: ImageGenerationToolConfig | None = None,
     custom_tool_config: CustomToolConfig | None = None,
+    code_interpreter_tool_config: CodeInterpreterToolConfig | None = None,
     user_knowledge_present: bool = False,
 ) -> dict[int, list[Tool]]:
     """Constructs tools based on persona configuration and available APIs"""
@@ -208,6 +226,19 @@ def construct_tools(
                         additional_headers=image_generation_tool_config.additional_headers,
                         model=img_generation_llm_config.model_name,
                     )
+                ]
+
+            # Handle Weather Tool
+            elif tool_cls.__name__ == WeatherTool.__name__:
+                tool_dict[db_tool_model.id] = [WeatherTool()]
+
+            # Handle Code Interpreter Tool
+            elif tool_cls.__name__ == CodeInterpreterTool.__name__:
+                if not code_interpreter_tool_config:
+                    code_interpreter_tool_config = CodeInterpreterToolConfig()
+                
+                tool_dict[db_tool_model.id] = [
+                    CodeInterpreterTool(api_url=code_interpreter_tool_config.api_url)
                 ]
 
             # Handle Internet Search Tool

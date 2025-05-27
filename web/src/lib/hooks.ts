@@ -252,14 +252,14 @@ export function useFilters({
     if (selectedSources.length > 0) {
       parts.push(
         `sources=${selectedSources
-          .map((source) => encodeURIComponent(source.internalName))
+        .map((source) => encodeURIComponent(source.internalName))
           .join(",")}`
       );
     }
     if (selectedDocumentSets.length > 0) {
       parts.push(
         `document_sets=${selectedDocumentSets
-          .map((ds) => encodeURIComponent(ds))
+        .map((ds) => encodeURIComponent(ds))
           .join(",")}`
       );
     }
@@ -298,10 +298,10 @@ export function useFilters({
     setSelectedDatasets,
     getFilterString,
     buildFiltersFromQueryString: (
-      filterString: string,
-      availableSources: ValidSources[],
-      availableDocumentSets: string[],
-      availableTags: Tag[]
+    filterString: string,
+    availableSources: ValidSources[],
+    availableDocumentSets: string[],
+    availableTags: Tag[]
     ) => {
       // Process time range
       const timeRangeMatch = filterString.match(/time_range=([^&]+)/);
@@ -334,8 +334,8 @@ export function useFilters({
             internalName: sourceName,
             displayName: sourceName,
           }))
-        );
-      }
+      );
+    }
 
       // Process document sets
       const documentSetsMatch = filterString.match(/document_sets=([^&]+)/);
@@ -345,7 +345,7 @@ export function useFilters({
           .map((ds) => decodeURIComponent(ds))
           .filter((ds) => availableDocumentSets.includes(ds));
         setSelectedDocumentSets(documentSetNames);
-      }
+    }
 
       // Process tags
       const tagsMatch = filterString.match(/tags=([^&]+)/);
@@ -359,7 +359,7 @@ export function useFilters({
             (pair) =>
               pair.tag_key === tag.tag_key && pair.tag_value === tag.tag_value
           )
-        );
+      );
         setSelectedTags(matchedTags);
       }
 
@@ -370,7 +370,7 @@ export function useFilters({
           .split(",")
           .map((ds) => decodeURIComponent(ds));
         setSelectedDatasets(datasetNames);
-      }
+  }
     },
     clearFilters: () => {
       setTimeRange(null);
