@@ -97,7 +97,11 @@ export const CheckFormField: React.FC<CheckFieldProps> = ({
   return tooltip ? (
     <TooltipProvider>
       <Tooltip>
-        <TooltipTrigger asChild>{checkboxContent}</TooltipTrigger>
+        <TooltipTrigger>
+          <div>
+            {checkboxContent}
+          </div>
+        </TooltipTrigger>
         <TooltipContent className="mb-4" side="top" align="center">
           <p>{tooltip}</p>
         </TooltipContent>

@@ -469,55 +469,8 @@ export function CCPairIndexingStatusTable({
 
   return (
     <>
-      <Table>
-        <TableHeader>
-          <ConnectorRow
-            invisible
-            ccPairsIndexingStatus={{
-              cc_pair_id: 1,
-              name: "Sample File Connector",
-              cc_pair_status: ConnectorCredentialPairStatus.ACTIVE,
-              last_status: "success",
-              connector: {
-                name: "Sample File Connector",
-                source: ValidSources.File,
-                input_type: "poll",
-                connector_specific_config: {
-                  file_locations: ["/path/to/sample/file.txt"],
-                  zip_metadata: {},
-                },
-                refresh_freq: 86400,
-                prune_freq: null,
-                indexing_start: new Date("2023-07-01T12:00:00Z"),
-                id: 1,
-                credential_ids: [],
-                access_type: "public",
-                time_created: "2023-07-01T12:00:00Z",
-                time_updated: "2023-07-01T12:00:00Z",
-              },
-              credential: {
-                id: 1,
-                name: "Sample Credential",
-                source: ValidSources.File,
-                user_id: "1",
-                user_email: "sample@example.com",
-                time_created: "2023-07-01T12:00:00Z",
-                time_updated: "2023-07-01T12:00:00Z",
-                credential_json: {},
-                admin_public: false,
-              },
-              access_type: "public",
-              docs_indexed: 1000,
-              last_success: "2023-07-01T12:00:00Z",
-              last_finished_status: "success",
-              latest_index_attempt: null,
-              groups: [], // Add this line
-              in_repeated_error_state: false,
-            }}
-            isEditable={false}
-          />
-        </TableHeader>
-        <div className="flex -mt-12 items-center w-0 m4 gap-x-2">
+      <div className="relative w-full">
+        <div className="flex items-center w-full mb-4 gap-x-2">
           <input
             type="text"
             ref={searchInputRef}
@@ -594,70 +547,124 @@ export function CCPairIndexingStatusTable({
             )}
           </div>
         </div>
-        <TableBody>
-          {displaySources
-            .filter(
-              (source) =>
-                source != "not_applicable" && source != "ingestion_api"
-            )
-            .map((source, ind) => {
-              const sourceMatches = source
-                .toLowerCase()
-                .includes(searchTerm.toLowerCase());
-
-              const statuses =
-                filteredGroupedStatuses[source] || groupedStatuses[source];
-
-              const matchingConnectors = statuses.filter((status) =>
-                (status.name || "")
+        
+        <Table>
+          <TableHeader>
+            <ConnectorRow
+              invisible
+              ccPairsIndexingStatus={{
+                cc_pair_id: 1,
+                name: "Sample File Connector",
+                cc_pair_status: ConnectorCredentialPairStatus.ACTIVE,
+                last_status: "success",
+                connector: {
+                  name: "Sample File Connector",
+                  source: ValidSources.File,
+                  input_type: "poll",
+                  connector_specific_config: {
+                    file_locations: ["/path/to/sample/file.txt"],
+                    zip_metadata: {},
+                  },
+                  refresh_freq: 86400,
+                  prune_freq: null,
+                  indexing_start: new Date("2023-07-01T12:00:00Z"),
+                  id: 1,
+                  credential_ids: [],
+                  access_type: "public",
+                  time_created: "2023-07-01T12:00:00Z",
+                  time_updated: "2023-07-01T12:00:00Z",
+                },
+                credential: {
+                  id: 1,
+                  name: "Sample Credential",
+                  source: ValidSources.File,
+                  user_id: "1",
+                  user_email: "sample@example.com",
+                  time_created: "2023-07-01T12:00:00Z",
+                  time_updated: "2023-07-01T12:00:00Z",
+                  credential_json: {},
+                  admin_public: false,
+                },
+                access_type: "public",
+                docs_indexed: 1000,
+                last_success: "2023-07-01T12:00:00Z",
+                last_finished_status: "success",
+                latest_index_attempt: null,
+                groups: [], // Add this line
+                in_repeated_error_state: false,
+              }}
+              isEditable={false}
+            />
+          </TableHeader>
+          <TableBody>
+            {displaySources
+              .filter(
+                (source) =>
+                  source != "not_applicable" && source != "ingestion_api"
+              )
+              .map((source, ind) => {
+                const sourceMatches = source
                   .toLowerCase()
-                  .includes(searchTerm.toLowerCase())
-              );
+                  .includes(searchTerm.toLowerCase());
 
-              if (sourceMatches || matchingConnectors.length > 0) {
-                return (
-                  <React.Fragment key={ind}>
-                    <br className="mt-4" />
-                    <SummaryRow
-                      source={source}
-                      summary={groupSummaries[source]}
-                      isOpen={connectorsToggled[source] || false}
-                      onToggle={() => toggleSource(source)}
-                    />
-                    {connectorsToggled[source] && (
-                      <>
-                        <TableRow className="border border-border dark:border-neutral-700">
-                          <TableHead>Name</TableHead>
-                          <TableHead>Last Indexed</TableHead>
-                          <TableHead>Status</TableHead>
-                          {isPaidEnterpriseFeaturesEnabled && (
-                            <TableHead>Permissions</TableHead>
-                          )}
-                          <TableHead>Total Docs</TableHead>
-                          <TableHead></TableHead>
-                        </TableRow>
-                        {(sourceMatches ? statuses : matchingConnectors).map(
-                          (ccPairsIndexingStatus) => (
-                            <ConnectorRow
-                              key={ccPairsIndexingStatus.cc_pair_id}
-                              ccPairsIndexingStatus={ccPairsIndexingStatus}
-                              isEditable={editableCcPairsIndexingStatuses.some(
-                                (e) =>
-                                  e.cc_pair_id ===
-                                  ccPairsIndexingStatus.cc_pair_id
-                              )}
-                            />
-                          )
-                        )}
-                      </>
-                    )}
-                  </React.Fragment>
+                const statuses =
+                  filteredGroupedStatuses[source] || groupedStatuses[source];
+
+                const matchingConnectors = statuses.filter((status) =>
+                  (status.name || "")
+                    .toLowerCase()
+                    .includes(searchTerm.toLowerCase())
                 );
-              }
-              return null;
-            })}
-        </TableBody>
-      </Table>
+
+                if (sourceMatches || matchingConnectors.length > 0) {
+                  return (
+                    <React.Fragment key={ind}>
+                      {ind > 0 && (
+                        <TableRow className="border-none">
+                          <TableCell colSpan={6} className="h-4 p-0 border-none"></TableCell>
+                        </TableRow>
+                      )}
+                      <SummaryRow
+                        source={source}
+                        summary={groupSummaries[source]}
+                        isOpen={connectorsToggled[source] || false}
+                        onToggle={() => toggleSource(source)}
+                      />
+                      {connectorsToggled[source] && (
+                        <>
+                          <TableRow className="border border-border dark:border-neutral-700">
+                            <TableHead>Name</TableHead>
+                            <TableHead>Last Indexed</TableHead>
+                            <TableHead>Status</TableHead>
+                            {isPaidEnterpriseFeaturesEnabled && (
+                              <TableHead>Permissions</TableHead>
+                            )}
+                            <TableHead>Total Docs</TableHead>
+                            <TableHead></TableHead>
+                          </TableRow>
+                          {(sourceMatches ? statuses : matchingConnectors).map(
+                            (ccPairsIndexingStatus) => (
+                              <ConnectorRow
+                                key={ccPairsIndexingStatus.cc_pair_id}
+                                ccPairsIndexingStatus={ccPairsIndexingStatus}
+                                isEditable={editableCcPairsIndexingStatuses.some(
+                                  (e) =>
+                                    e.cc_pair_id ===
+                                    ccPairsIndexingStatus.cc_pair_id
+                                )}
+                              />
+                            )
+                          )}
+                        </>
+                      )}
+                    </React.Fragment>
+                  );
+                }
+                return null;
+              })}
+          </TableBody>
+        </Table>
+      </div>
     </>
   );
 }

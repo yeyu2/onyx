@@ -53,6 +53,7 @@ from onyx.server.settings.store import store_settings
 from onyx.tools.built_in_tools import auto_add_search_tool_to_personas
 from onyx.tools.built_in_tools import load_builtin_tools
 from onyx.tools.built_in_tools import refresh_built_in_tools_cache
+from onyx.tools.built_in_tools import auto_add_weather_tool_to_search_persona
 from onyx.utils.gpu_utils import gpu_status_request
 from onyx.utils.logger import setup_logger
 from shared_configs.configs import ALT_INDEX_SUFFIX
@@ -294,6 +295,7 @@ def setup_postgres(db_session: Session) -> None:
 
     refresh_built_in_tools_cache(db_session)
     auto_add_search_tool_to_personas(db_session)
+    auto_add_weather_tool_to_search_persona(db_session)
 
     if GEN_AI_API_KEY and fetch_default_provider(db_session) is None:
         # Only for dev flows

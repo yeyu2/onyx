@@ -168,6 +168,61 @@ def auto_add_search_tool_to_personas(db_session: Session) -> None:
     logger.notice("Completed adding SearchTool to relevant Personas.")
 
 
+def get_weather_tool(db_session: Session) -> ToolDBModel | None:
+    """
+    Retrieves the WeatherTool from the BUILT_IN_TOOLS list.
+    """
+    weather_tool_id = next(
+        (
+            tool["in_code_tool_id"]
+            for tool in BUILT_IN_TOOLS
+            if tool["cls"].__name__ == WeatherTool.__name__
+        ),
+        None,
+    )
+
+    if not weather_tool_id:
+        return None
+
+    weather_tool = db_session.execute(
+        select(ToolDBModel).where(ToolDBModel.in_code_tool_id == weather_tool_id)
+    ).scalar_one_or_none()
+
+    return weather_tool
+
+
+def auto_add_weather_tool_to_search_persona(db_session: Session) -> None:
+    """
+    Automatically adds the WeatherTool to the Search persona (ID 0) so it can handle
+    weather-related questions. This makes the weather tool implicitly available to
+    the search assistant without requiring manual configuration.
+    """
+    # Fetch the WeatherTool from the database
+    weather_tool = get_weather_tool(db_session)
+
+    if not weather_tool:
+        logger.notice("WeatherTool not found in the database. Skipping auto-assignment.")
+        return
+
+    # Fetch the Search persona (ID 0)
+    search_persona = db_session.execute(
+        select(Persona).where(Persona.id == 0)
+    ).scalar_one_or_none()
+
+    if not search_persona:
+        logger.notice("Search persona (ID 0) not found. Skipping weather tool assignment.")
+        return
+
+    # Add the WeatherTool to the Search persona if it's not already there
+    if weather_tool not in search_persona.tools:
+        search_persona.tools.append(weather_tool)
+        logger.notice(f"Added WeatherTool to Search Persona (ID: {search_persona.id})")
+        db_session.commit()
+        logger.notice("Completed adding WeatherTool to Search Persona.")
+    else:
+        logger.notice("WeatherTool already present in Search Persona.")
+
+
 _built_in_tools_cache: dict[str, Type[Tool]] | None = None
 
 

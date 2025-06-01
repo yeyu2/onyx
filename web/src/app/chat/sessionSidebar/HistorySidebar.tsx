@@ -5,6 +5,8 @@ import React, {
   forwardRef,
   useContext,
   useCallback,
+  useState,
+  useEffect,
 } from "react";
 import Link from "next/link";
 import {
@@ -197,6 +199,13 @@ export const HistorySidebar = forwardRef<HTMLDivElement, HistorySidebarProps>(
 
     const currentChatId = currentChatSession?.id;
 
+    // Track client-side mounting to prevent hydration mismatches with DnD
+    const [isMounted, setIsMounted] = useState(false);
+
+    useEffect(() => {
+      setIsMounted(true);
+    }, []);
+
     const sensors = useSensors(
       useSensor(PointerSensor, {
         activationConstraint: {
@@ -338,65 +347,179 @@ export const HistorySidebar = forwardRef<HTMLDivElement, HistorySidebarProps>(
             <div className="flex px-4 font-normal text-sm gap-x-2 leading-normal text-text-500/80 dark:text-[#D4D4D4] items-center font-normal leading-normal">
               Assistants
             </div>
-            <DndContext
-              sensors={sensors}
-              collisionDetection={closestCenter}
-              onDragEnd={handleDragEnd}
-              modifiers={[restrictToVerticalAxis]}
-            >
-              <SortableContext
-                items={pinnedAssistants.map((a) =>
-                  a.id === 0 ? "assistant-0" : a.id
-                )}
-                strategy={verticalListSortingStrategy}
+            {isMounted && (
+              <DndContext
+                sensors={sensors}
+                collisionDetection={closestCenter}
+                onDragEnd={handleDragEnd}
+                modifiers={[restrictToVerticalAxis]}
               >
-                <div className="flex px-0  mr-4 flex-col gap-y-1 mt-1">
-                  {pinnedAssistants.map((assistant: Persona) => (
-                    <SortableAssistant
-                      key={assistant.id === 0 ? "assistant-0" : assistant.id}
-                      assistant={assistant}
-                      active={assistant.id === liveAssistant?.id}
+                <SortableContext
+                  items={pinnedAssistants.map((a) =>
+                    a.id === 0 ? "assistant-0" : a.id
+                  )}
+                  strategy={verticalListSortingStrategy}
+                >
+                  <div className="flex px-0  mr-4 flex-col gap-y-1 mt-1">
+                    {pinnedAssistants.map((assistant: Persona) => (
+                      <SortableAssistant
+                        key={assistant.id === 0 ? "assistant-0" : assistant.id}
+                        assistant={assistant}
+                        active={assistant.id === liveAssistant?.id}
+                        onClick={() => {
+                          router.push(
+                            buildChatUrl(searchParams, null, assistant.id)
+                          );
+                        }}
+                        onPinAction={async (e: React.MouseEvent) => {
+                          e.stopPropagation();
+                          await toggleAssistantPinnedStatus(
+                            pinnedAssistants.map((a) => a.id),
+                            assistant.id,
+                            false
+                          );
+                          await refreshAssistants();
+                        }}
+                      />
+                    ))}
+                  </div>
+                </SortableContext>
+              </DndContext>
+            )}
+            {!isMounted && (
+              <div className="flex px-0  mr-4 flex-col gap-y-1 mt-1">
+                {pinnedAssistants.map((assistant: Persona) => (
+                  <div
+                    key={assistant.id === 0 ? "assistant-0" : assistant.id}
+                    className="flex items-center group"
+                  >
+                    <DragHandle
+                      size={16}
+                      className="w-3 ml-[2px] mr-[2px] opacity-0 flex-none"
+                    />
+                    <div
+                      data-testid={`assistant-[${assistant.id}]`}
                       onClick={() => {
                         router.push(
                           buildChatUrl(searchParams, null, assistant.id)
                         );
                       }}
+                      className={`cursor-pointer w-full group hover:bg-background-chat-hover ${
+                        assistant.id === liveAssistant?.id ? "bg-accent-background-selected" : ""
+                      } relative flex items-center gap-x-2 py-1 px-2 rounded-md`}
+                    >
+                      <AssistantIcon assistant={assistant} size={16} className="flex-none" />
+                      <TruncatedText
+                        className="text-base mr-4 text-left w-fit line-clamp-1 text-ellipsis text-black dark:text-[#D4D4D4]"
+                        text={assistant.name}
+                      />
+
+                      <TooltipProvider>
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <button
+                              onClick={async (e: React.MouseEvent) => {
+                                e.stopPropagation();
+                                await toggleAssistantPinnedStatus(
+                                  pinnedAssistants.map((a) => a.id),
+                                  assistant.id,
+                                  false
+                                );
+                                await refreshAssistants();
+                              }}
+                              className="group-hover:block hidden absolute right-2"
+                            >
+                              <CircleX
+                                size={16}
+                                className="text-text-history-sidebar-button"
+                              />
+                            </button>
+                          </TooltipTrigger>
+                          <TooltipContent>
+                            Unpin this assistant from the sidebar
+                          </TooltipContent>
+                        </Tooltip>
+                      </TooltipProvider>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+            {!pinnedAssistants.some((a) => a.id === liveAssistant?.id) &&
+              liveAssistant && (
+                <div className="w-full mt-1 pr-4">
+                  {isMounted ? (
+                    <SortableAssistant
+                      pinned={false}
+                      assistant={liveAssistant}
+                      active={liveAssistant.id === liveAssistant?.id}
+                      onClick={() => {
+                        router.push(
+                          buildChatUrl(searchParams, null, liveAssistant.id)
+                        );
+                      }}
                       onPinAction={async (e: React.MouseEvent) => {
                         e.stopPropagation();
                         await toggleAssistantPinnedStatus(
-                          pinnedAssistants.map((a) => a.id),
-                          assistant.id,
-                          false
+                          [...pinnedAssistants.map((a) => a.id)],
+                          liveAssistant.id,
+                          true
                         );
                         await refreshAssistants();
                       }}
                     />
-                  ))}
-                </div>
-              </SortableContext>
-            </DndContext>
-            {!pinnedAssistants.some((a) => a.id === liveAssistant?.id) &&
-              liveAssistant && (
-                <div className="w-full mt-1 pr-4">
-                  <SortableAssistant
-                    pinned={false}
-                    assistant={liveAssistant}
-                    active={liveAssistant.id === liveAssistant?.id}
-                    onClick={() => {
-                      router.push(
-                        buildChatUrl(searchParams, null, liveAssistant.id)
-                      );
-                    }}
-                    onPinAction={async (e: React.MouseEvent) => {
-                      e.stopPropagation();
-                      await toggleAssistantPinnedStatus(
-                        [...pinnedAssistants.map((a) => a.id)],
-                        liveAssistant.id,
-                        true
-                      );
-                      await refreshAssistants();
-                    }}
-                  />
+                  ) : (
+                    <div className="flex items-center group">
+                      <DragHandle
+                        size={16}
+                        className="w-3 ml-[2px] mr-[2px] opacity-0 flex-none"
+                      />
+                      <div
+                        data-testid={`assistant-[${liveAssistant.id}]`}
+                        onClick={() => {
+                          router.push(
+                            buildChatUrl(searchParams, null, liveAssistant.id)
+                          );
+                        }}
+                        className={`cursor-pointer w-full group hover:bg-background-chat-hover ${
+                          liveAssistant.id === liveAssistant?.id ? "bg-accent-background-selected" : ""
+                        } relative flex items-center gap-x-2 py-1 px-2 rounded-md`}
+                      >
+                        <AssistantIcon assistant={liveAssistant} size={16} className="flex-none" />
+                        <TruncatedText
+                          className="text-base mr-4 text-left w-fit line-clamp-1 text-ellipsis text-black dark:text-[#D4D4D4]"
+                          text={liveAssistant.name}
+                        />
+
+                        <TooltipProvider>
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <button
+                                onClick={async (e: React.MouseEvent) => {
+                                  e.stopPropagation();
+                                  await toggleAssistantPinnedStatus(
+                                    [...pinnedAssistants.map((a) => a.id)],
+                                    liveAssistant.id,
+                                    true
+                                  );
+                                  await refreshAssistants();
+                                }}
+                                className="group-hover:block hidden absolute right-2"
+                              >
+                                <PinIcon
+                                  size={16}
+                                  className="text-text-history-sidebar-button"
+                                />
+                              </button>
+                            </TooltipTrigger>
+                            <TooltipContent>
+                              Pin this assistant to the sidebar
+                            </TooltipContent>
+                          </Tooltip>
+                        </TooltipProvider>
+                      </div>
+                    </div>
+                  )}
                 </div>
               )}
 
