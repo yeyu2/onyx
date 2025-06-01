@@ -145,7 +145,7 @@ export default function LLMPopover({
     trigger
       ? () => trigger
       : () => (
-          <button
+          <div
             className="dark:text-[#fff] text-[#000] focus:outline-none"
             data-testid="llm-popover-trigger"
           >
@@ -168,7 +168,7 @@ export default function LLMPopover({
               )}
               tooltipContent="Switch models"
             />
-          </button>
+          </div>
         ),
     [defaultModelDisplayName, defaultProvider, llmManager?.currentLlm]
   );

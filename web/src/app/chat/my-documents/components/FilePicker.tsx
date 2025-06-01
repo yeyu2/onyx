@@ -398,12 +398,16 @@ export const FilePickerModal: React.FC<FilePickerModalProps> = ({
       // Initialize selected file IDs
       const fileIds = new Set<number>();
       selectedFiles.forEach((file) => fileIds.add(file.id));
-      setSelectedFileIds(fileIds);
-
+      
       // Initialize selected folder IDs
       const folderIds = new Set<number>();
       selectedFolders.forEach((folder) => folderIds.add(folder.id));
-      setSelectedFolderIds(folderIds);
+
+      // Use setTimeout to defer the state updates until after render is complete
+      setTimeout(() => {
+        setSelectedFileIds(fileIds);
+        setSelectedFolderIds(folderIds);
+      }, 0);
     }
   }, [isOpen, selectedFiles, selectedFolders]);
 

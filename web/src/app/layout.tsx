@@ -120,7 +120,10 @@ export default async function RootLayout({
         )}
       </head>
 
-      <body className={`relative ${inter.variable} font-hanken`}>
+      <body 
+        className={`relative ${inter.variable} font-hanken`}
+        suppressHydrationWarning
+      >
         <ThemeProvider
           attribute="class"
           defaultTheme="system"

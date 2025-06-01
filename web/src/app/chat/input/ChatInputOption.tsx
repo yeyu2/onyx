@@ -29,13 +29,13 @@ export const ChatInputOption: React.FC<ChatInputOptionProps> = ({
   onClick,
   minimize,
 }) => {
-  const componentRef = useRef<HTMLButtonElement>(null);
+  const componentRef = useRef<HTMLDivElement>(null);
 
   return (
     <TooltipProvider>
       <Tooltip>
         <TooltipTrigger asChild>
-          <button
+          <div
             ref={componentRef}
             className={`
             relative 
@@ -66,17 +66,24 @@ export const ChatInputOption: React.FC<ChatInputOptionProps> = ({
             }
           `}
             onClick={onClick}
+            role="button"
+            tabIndex={0}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter' || e.key === ' ') {
+                onClick?.();
+              }
+            }}
           >
-            <Icon size={size} className="h-4 w-4 my-auto  flex-none" />
+            <Icon size={size} className="h-4 w-4 my-auto flex-none" />
             <div className={`flex items-center ${minimize && "mobile:hidden"}`}>
               {name && (
-                <span className="text-sm  break-all line-clamp-1">{name}</span>
+                <span className="text-sm break-all line-clamp-1">{name}</span>
               )}
               {toggle && (
                 <ChevronDownIcon className="flex-none ml-1" size={size - 4} />
               )}
             </div>
-          </button>
+          </div>
         </TooltipTrigger>
         <TooltipContent>{tooltipContent}</TooltipContent>
       </Tooltip>
