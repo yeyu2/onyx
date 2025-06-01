@@ -152,6 +152,12 @@ const Main = () => {
           href="/admin/documents/datasets/new"
           text="New Dataset"
         />
+        <Link 
+          href="/admin/documents/datasets/settings" 
+          className="ml-2 px-4 py-2 bg-gray-100 hover:bg-gray-200 dark:bg-gray-800 dark:hover:bg-gray-700 rounded-md flex items-center text-sm"
+        >
+          <FiDatabase className="mr-2" /> Dataset Settings
+        </Link>
       </div>
 
       <Separator />

@@ -48,8 +48,6 @@ export function FilterPopup({
   filterManager,
   trigger,
 }: FilterPopupProps) {
-  console.log("FilterPopup received datasets:", availableDatasets);
-  
   const [selectedFilter, setSelectedFilter] = useState<FilterCategories>(
     FilterCategories.date
   );

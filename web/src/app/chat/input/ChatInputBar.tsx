@@ -470,7 +470,6 @@ export function ChatInputBar({
 
   // Filter options display
   const selectedSourcesIcons = filterManager.selectedSources.map((source) => {
-    console.log("Rendering source chip:", source.displayName);
     return (
       <SourceChip2
         key={source.internalName}
@@ -490,7 +489,6 @@ export function ChatInputBar({
   });
 
   const selectedTagsIcons = filterManager.selectedTags.map((tag) => {
-    console.log("Rendering tag chip:", `${tag.tag_key}: ${tag.tag_value}`);
     return (
       <SourceChip2
         key={`${tag.tag_key}:${tag.tag_value}`}
@@ -512,7 +510,6 @@ export function ChatInputBar({
 
   const selectedDocumentSetsIcons = filterManager.selectedDocumentSets.map(
     (documentSet) => {
-      console.log("Rendering document set chip:", documentSet);
       return (
         <SourceChip2
           key={documentSet}
@@ -534,7 +531,6 @@ export function ChatInputBar({
 
   const selectedDatasetsIcons = filterManager.selectedDatasets.map(
     (dataset) => {
-      console.log("Rendering dataset chip:", dataset);
       return (
         <SourceChip2
           key={dataset}
@@ -561,9 +557,6 @@ export function ChatInputBar({
     filterManager.selectedDocumentSets.length > 0 ||
     filterManager.selectedTags.length > 0 ||
     filterManager.selectedDatasets.length > 0;
-    
-  console.log("Active filters?", activeFilters);
-  console.log("Selected datasets:", filterManager.selectedDatasets);
 
   return (
     <div id="onyx-chat-input">

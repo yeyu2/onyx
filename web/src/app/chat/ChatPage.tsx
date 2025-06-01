@@ -148,6 +148,21 @@ export enum UploadIntent {
   DATASET, // For dataset files that won't be indexed but will be used by the code interpreter
 }
 
+// Dataset configuration - can be changed to dynamically set dataset file paths
+export const DATASET_CONFIG = {
+  basePath: "/datasets/", // Default path for dataset files (can be modified at runtime)
+};
+
+/**
+ * Update the base path for dataset files
+ * @param newPath - The new base path for dataset files (should end with a slash)
+ */
+export const setDatasetBasePath = (newPath: string) => {
+  // Ensure the path ends with a slash
+  DATASET_CONFIG.basePath = newPath.endsWith('/') ? newPath : `${newPath}/`;
+  console.log(`Updated dataset base path to: ${DATASET_CONFIG.basePath}`);
+};
+
 export function ChatPage({
   toggle,
   documentSidebarInitialWidth,
@@ -1443,8 +1458,18 @@ export function ChatPage({
       // Identify datasets by the metadata flag instead of file type
       const datasetFiles = filesForUpload.filter(file => file.metadata?.isDataset === true);
       
+      console.log(`[DEBUG] Found ${datasetFiles.length} dataset files for this message`);
+      if (datasetFiles.length > 0) {
+        console.log(`[DEBUG] Dataset files:`, datasetFiles.map(f => f.name));
+      }
+      
       // Flag to determine if this is a dataset query (suppress RAG)
       const isDatasetQuery = datasetFiles.length > 0 || filterManager.selectedDatasets.length > 0;
+      
+      console.log(`[DEBUG] isDatasetQuery: ${isDatasetQuery}, selected datasets: ${filterManager.selectedDatasets.length}`);
+      if (filterManager.selectedDatasets.length > 0) {
+        console.log(`[DEBUG] Selected datasets from filter:`, filterManager.selectedDatasets);
+      }
       
       // Create dataset instructions for the code interpreter if there are dataset files
       let datasetInstructions = "";
@@ -1453,6 +1478,7 @@ export function ChatPage({
       const hasSelectedDatasets = filterManager.selectedDatasets.length > 0;
       
       if (datasetFiles.length > 0 || hasSelectedDatasets) {
+        console.log(`[DEBUG] Building dataset instructions for prompt`);
         datasetInstructions = "IMPORTANT: The user has dataset files or filtered for specific datasets for analysis. When asked about these datasets:\n";
         datasetInstructions += "1. DO NOT use RAG or retrieved content to answer questions about these datasets.\n";
         datasetInstructions += "2. ONLY generate Python code that could analyze the data without executing it.\n";
@@ -1462,20 +1488,92 @@ export function ChatPage({
         if (hasSelectedDatasets) {
           datasetInstructions += "Selected datasets:\n";
           filterManager.selectedDatasets.forEach(datasetName => {
-            datasetInstructions += `- ${datasetName} (available at: /datasets/${datasetName})\n`;
+            datasetInstructions += `- ${datasetName} (available at: ${DATASET_CONFIG.basePath}${datasetName})\n`;
           });
           datasetInstructions += "\n";
         }
         
         // Add information about uploaded dataset files
         if (datasetFiles.length > 0) {
+          console.log(`[DEBUG] Adding ${datasetFiles.length} uploaded dataset files to instructions`);
           datasetInstructions += "The following dataset files are available:\n";
           datasetFiles.forEach(file => {
-            const meta = file.metadata || { path: `/datasets/${file.name}` };
+            const meta = file.metadata || { path: `${DATASET_CONFIG.basePath}${file.name}` };
             const fileType = 'fileType' in meta ? meta.fileType : 'unknown type';
             const fileSize = 'fileSize' in meta ? `${(meta.fileSize / 1024).toFixed(2)}KB` : 'unknown size';
+            
+            console.log(`[DEBUG] Processing dataset file for prompt: ${file.name}`);
+            console.log(`[DEBUG] File metadata:`, meta);
+            
+            // Get the file extension to determine type
+            const fileExt = file.name ? file.name.split('.').pop()?.toLowerCase() : '';
+            
             datasetInstructions += `- ${file.name} (${fileType}, ${fileSize})\n`;
             datasetInstructions += `  Available at: ${meta.path}\n`;
+            
+            // Add schema information from the file metadata if available
+            if (meta && 'schema' in meta && meta.schema) {
+              // Define schema structure type
+              type SchemaType = {
+                description?: string;
+                columns?: Array<{name: string, type: string}>;
+                sampleData?: string;
+                rowCount?: number;
+              };
+              
+              const schema = meta.schema as SchemaType;
+              console.log(`[DEBUG] Dataset schema available for ${file.name}:`, {
+                hasDescription: !!schema.description,
+                columnCount: schema.columns?.length || 0,
+                hasSampleData: !!schema.sampleData,
+                rowCount: schema.rowCount || 0
+              });
+              
+              // Add file description
+              if (schema.description) {
+                datasetInstructions += `  Description: ${schema.description}\n`;
+              }
+              
+              // Add column information
+              if (schema.columns && schema.columns.length > 0) {
+                console.log(`[DEBUG] Adding ${schema.columns.length} columns to prompt for ${file.name}`);
+                datasetInstructions += `  Schema:\n`;
+                schema.columns.forEach((column: {name: string, type: string}) => {
+                  datasetInstructions += `    - ${column.name} (${column.type})\n`;
+                });
+              }
+              
+              // Add sample data
+              if (schema.sampleData) {
+                console.log(`[DEBUG] Adding sample data to prompt for ${file.name}`);
+                datasetInstructions += `  Sample data (first few rows):\n`;
+                datasetInstructions += `  \`\`\`json\n  ${schema.sampleData}\n  \`\`\`\n`;
+              }
+            } 
+            // If no schema is available, add generic information based on file type
+            else if (fileExt === 'csv') {
+              console.log(`[DEBUG] No schema available for CSV file ${file.name}, using generic description`);
+              datasetInstructions += `  Description: CSV file with tabular data.\n`;
+              datasetInstructions += `  Schema Information: This is a CSV file which likely contains a header row with column names, followed by data rows.\n`;
+              datasetInstructions += `  Usage Guide: Use pandas to read this file with:\n`;
+              datasetInstructions += `    \`\`\`python\n    import pandas as pd\n    df = pd.read_csv('${meta.path}')\n    # Examine the structure\n    df.head()\n    df.info()\n    df.describe()\n    \`\`\`\n`;
+            } 
+            else if (fileExt === 'xlsx' || fileExt === 'xls') {
+              console.log(`[DEBUG] No schema available for Excel file ${file.name}, using generic description`);
+              datasetInstructions += `  Description: Excel spreadsheet file which may contain multiple sheets.\n`;
+              datasetInstructions += `  Schema Information: This is an Excel file which may contain multiple sheets, each with tabular data.\n`;
+              datasetInstructions += `  Usage Guide: Use pandas to read this file with:\n`;
+              datasetInstructions += `    \`\`\`python\n    import pandas as pd\n    # Read the first sheet\n    df = pd.read_excel('${meta.path}')\n    # Or specify a sheet\n    # df = pd.read_excel('${meta.path}', sheet_name='Sheet1')\n    # List all sheets\n    # xls = pd.ExcelFile('${meta.path}')\n    # sheet_names = xls.sheet_names\n    \`\`\`\n`;
+            }
+            else if (fileExt === 'json') {
+              console.log(`[DEBUG] No schema available for JSON file ${file.name}, using generic description`);
+              datasetInstructions += `  Description: JSON file which may contain structured data.\n`;
+              datasetInstructions += `  Schema Information: This is a JSON file which could contain an array of objects or a nested object structure.\n`;
+              datasetInstructions += `  Usage Guide: Use pandas to read this file with:\n`;
+              datasetInstructions += `    \`\`\`python\n    import pandas as pd\n    import json\n    # For JSON arrays\n    df = pd.read_json('${meta.path}')\n    # For nested JSON\n    # with open('${meta.path}') as f:\n    #     data = json.load(f)\n    # df = pd.json_normalize(data)\n    \`\`\`\n`;
+            }
+            
+            datasetInstructions += `\n`;
           });
         }
         
@@ -1487,20 +1585,23 @@ export function ChatPage({
           filterManager.selectedDatasets.forEach(datasetName => {
             const fileExt = datasetName.split('.').pop()?.toLowerCase();
             if (fileExt === 'csv') {
-              datasetInstructions += `df_${datasetName.replace(/\.\w+$/, '').replace(/\W+/g, '_')} = pd.read_csv('/datasets/${datasetName}')\n`;
+              datasetInstructions += `df_${datasetName.replace(/\.\w+$/, '').replace(/\W+/g, '_')} = pd.read_csv('${DATASET_CONFIG.basePath}${datasetName}')\n`;
             } else if (fileExt === 'xlsx' || fileExt === 'xls') {
-              datasetInstructions += `df_${datasetName.replace(/\.\w+$/, '').replace(/\W+/g, '_')} = pd.read_excel('/datasets/${datasetName}')\n`;
+              datasetInstructions += `df_${datasetName.replace(/\.\w+$/, '').replace(/\W+/g, '_')} = pd.read_excel('${DATASET_CONFIG.basePath}${datasetName}')\n`;
             } else if (fileExt === 'json') {
-              datasetInstructions += `df_${datasetName.replace(/\.\w+$/, '').replace(/\W+/g, '_')} = pd.json_normalize(pd.read_json('/datasets/${datasetName}'))\n`;
+              datasetInstructions += `df_${datasetName.replace(/\.\w+$/, '').replace(/\W+/g, '_')} = pd.json_normalize(pd.read_json('${DATASET_CONFIG.basePath}${datasetName}'))\n`;
             } else {
               datasetInstructions += `# For '${datasetName}', determine the appropriate method to load based on file type\n`;
             }
           });
         } else {
-          datasetInstructions += "# Example for loading a CSV file\ndf = pd.read_csv('/datasets/filename.csv')\n# Or for Excel\n# df = pd.read_excel('/datasets/filename.xlsx')\n# Or for JSON\n# df = pd.json_normalize(pd.read_json('/datasets/filename.json'))\n";
+          datasetInstructions += "# Example for loading a CSV file\ndf = pd.read_csv('${DATASET_CONFIG.basePath}filename.csv')\n# Or for Excel\n# df = pd.read_excel('${DATASET_CONFIG.basePath}filename.xlsx')\n# Or for JSON\n# df = pd.json_normalize(pd.read_json('${DATASET_CONFIG.basePath}filename.json'))\n";
         }
         
         datasetInstructions += "\n# Now analyze the data...\n```";
+        
+        console.log(`[DEBUG] Final dataset instructions length: ${datasetInstructions.length} characters`);
+        console.log(`[DEBUG] Dataset instructions snippet (first 200 chars): ${datasetInstructions.substring(0, 200)}...`);
       }
 
       await updateCurrentMessageFIFO(stack, {
@@ -1545,7 +1646,7 @@ export function ChatPage({
         systemPromptOverride:
           datasetInstructions ? 
           (searchParams?.get(SEARCH_PARAM_NAMES.SYSTEM_PROMPT) || "") + "\n\n" + 
-          (filterManager.selectedDatasets.length > 0 ? `Using datasets: ${filterManager.selectedDatasets.map(name => `${name} (/datasets/${name})`).join(", ")}\n` : "") + 
+          (filterManager.selectedDatasets.length > 0 ? `Using datasets: ${filterManager.selectedDatasets.map(name => `${name} (${DATASET_CONFIG.basePath}${name})`).join(", ")}\n` : "") + 
           datasetInstructions : 
           searchParams?.get(SEARCH_PARAM_NAMES.SYSTEM_PROMPT) || undefined,
         useExistingUserMessage: isSeededChat,
@@ -1556,6 +1657,12 @@ export function ChatPage({
           retrievalEnabled,
         // disableRetrieval: isDatasetQuery, // Disable retrieval for dataset queries
       });
+      
+      if (datasetInstructions) {
+        console.log(`[DEBUG] System prompt set with dataset instructions`);
+        console.log(`[DEBUG] isDatasetQuery: ${isDatasetQuery} - RAG ${isDatasetQuery ? 'disabled' : 'enabled'}`);
+        console.log(`[DEBUG] useLanggraph: ${!isDatasetQuery && settings?.settings.pro_search_enabled && proSearchEnabled && retrievalEnabled}`);
+      }
 
       const delay = (ms: number) => {
         return new Promise((resolve) => setTimeout(resolve, ms));
@@ -2079,6 +2186,20 @@ export function ChatPage({
         if (fileMetadata) {
           formData.append("datasetMetadata", JSON.stringify(fileMetadata));
         }
+        
+        // For CSV files, try to read a preview to extract schema information
+        if (file.name.toLowerCase().endsWith('.csv') || 
+            file.name.toLowerCase().endsWith('.xlsx') || 
+            file.name.toLowerCase().endsWith('.xls') ||
+            file.name.toLowerCase().endsWith('.json')) {
+          try {
+            // We'll read a small sample of the file to infer schema
+            // This will be handled directly in the backend in a future update
+            console.log(`Dataset file detected: ${file.name}, ${file.type}, size: ${(file.size / 1024).toFixed(2)} KB`);
+          } catch (error) {
+            console.error("Error processing dataset file:", error);
+          }
+        }
       }
       
       const response: FileResponse[] = await uploadFile(formData, null);
@@ -2115,10 +2236,23 @@ export function ChatPage({
               fileName: file.name,
               fileSize: file.size,
               lastModified: new Date(file.lastModified).toISOString(),
-              path: `/datasets/${uploadedFile.name}`,
-              isDataset: true // Special flag to identify datasets in the frontend
+              path: `${DATASET_CONFIG.basePath}${uploadedFile.name}`,
+              isDataset: true, // Special flag to identify datasets in the frontend
+              // Add the schema information from the original file
+              schema: (file as any).datasetMetadata?.schema
             }
           };
+          
+          console.log(`[DEBUG] Created dataset FileDescriptor for ${uploadedFile.name}:`, {
+            hasSchema: !!(datasetFileDescriptor.metadata && datasetFileDescriptor.metadata.schema),
+            schemaInfo: datasetFileDescriptor.metadata?.schema 
+              ? {
+                  columnCount: (datasetFileDescriptor.metadata.schema.columns || []).length,
+                  hasDescription: !!datasetFileDescriptor.metadata.schema.description,
+                  rowCount: datasetFileDescriptor.metadata.schema.rowCount
+                } 
+              : 'No schema'
+          });
           
           // Add to message files
           setCurrentMessageFiles((prev) => [...prev, datasetFileDescriptor]);
@@ -2771,7 +2905,7 @@ export function ChatPage({
                           overflow-y-hidden 
                           bg-transparent
                           transition-all 
-                          bg-opacity-80
+                          pointer-events-none
                           duration-300 
                           ease-in-out
                           h-full
@@ -3353,8 +3487,9 @@ export function ChatPage({
                                       setPresentingDocument={
                                         setPresentingDocument
                                       }
+                                      key={-2}
+                                      messageId={-1}
                                       currentPersona={liveAssistant}
-                                      messageId={message.messageId}
                                       content={
                                         <ErrorBanner
                                           resubmit={handleResubmitLastMessage}

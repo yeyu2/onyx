@@ -208,6 +208,10 @@ def setup_logger(
     log_level: int = get_log_level_from_str(),
     extra: MutableMapping[str, Any] | None = None,
 ) -> OnyxLoggingAdapter:
+    # Force debug logging for development purposes
+    # Uncomment the next line to force debug logging
+    log_level = logging.DEBUG  # Force debug level for all loggers
+    
     logger = logging.getLogger(name)
 
     # If the logger already has handlers, assume it was already configured and return it.

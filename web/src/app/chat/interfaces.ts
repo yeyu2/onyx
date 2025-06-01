@@ -58,6 +58,13 @@ export interface FileDescriptor {
     lastModified: string;
     path: string;
     isDataset?: boolean;
+    // Schema information for dataset files
+    schema?: {
+      description?: string;
+      columns?: Array<{name: string, type: string}>;
+      sampleData?: string;
+      rowCount?: number;
+    };
   };
 }
 

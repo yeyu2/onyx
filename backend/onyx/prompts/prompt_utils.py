@@ -156,6 +156,15 @@ def find_last_index(lst: list[int], max_prompt_tokens: int) -> int:
         logger.warning("Empty message history passed to find_last_index")
         return 0
 
+    # First check if the last message alone exceeds the token limit
+    last_msg_tokens = lst[-1] + _PER_MESSAGE_TOKEN_BUFFER
+    if last_msg_tokens > max_prompt_tokens:
+        logger.error(
+            f"Last message alone is too large! max_prompt_tokens: {max_prompt_tokens}, "
+            f"message_token_counts: {lst}, last_message_tokens: {last_msg_tokens}"
+        )
+        raise ValueError("Last message alone is too large!")
+
     last_ind = 0
     for i in range(len(lst) - 1, -1, -1):
         running_sum += lst[i] + _PER_MESSAGE_TOKEN_BUFFER
@@ -165,9 +174,10 @@ def find_last_index(lst: list[int], max_prompt_tokens: int) -> int:
 
     if last_ind >= len(lst):
         logger.error(
-            f"Last message alone is too large! max_prompt_tokens: {max_prompt_tokens}, message_token_counts: {lst}"
+            f"Error in token calculation. last_ind={last_ind}, len(lst)={len(lst)}, "
+            f"max_prompt_tokens: {max_prompt_tokens}, message_token_counts: {lst}"
         )
-        raise ValueError("Last message alone is too large!")
+        raise ValueError("Error in token calculation")
 
     return last_ind
 
@@ -180,6 +190,18 @@ def drop_messages_history_overflow(
     The System message should be kept if at all possible and the latest user input which is inserted in the
     prompt template must be included"""
 
+    # Debug logging for large prompts
+    total_tokens = sum(token_count for _, token_count in messages_with_token_cnts)
+    logger.debug(f"Total tokens in prompt: {total_tokens}, max allowed: {max_allowed_tokens}")
+    
+    # Log all messages with their token counts
+    for i, (message, token_count) in enumerate(messages_with_token_cnts):
+        role = message.type
+        content = message.content if isinstance(message.content, str) else "Non-text content"
+        truncated_content = content[:2000] + "..." if len(content) > 500 else content
+        logger.debug(f"Message {i} ({role}): {token_count} tokens - {truncated_content}")
+    
+    # Continue with existing logic
     final_messages: list[BaseMessage] = []
     messages, token_counts = cast(
         tuple[list[BaseMessage], list[int]], zip(*messages_with_token_cnts)
@@ -202,9 +224,25 @@ def drop_messages_history_overflow(
         final_msgs = [final_msg]
 
     # Start dropping from the history if necessary
-    ind_prev_msg_start = find_last_index(
-        token_counts, max_prompt_tokens=max_allowed_tokens
-    )
+    try:
+        ind_prev_msg_start = find_last_index(
+            token_counts, max_prompt_tokens=max_allowed_tokens
+        )
+        
+        # Log the messages we're keeping
+        logger.debug(f"Keeping messages from index {ind_prev_msg_start} to {len(messages)-1}")
+        
+    except ValueError as e:
+        # Special handling for the "Last message alone is too large" error
+        logger.error(f"Prompt overflow error: {str(e)}")
+        # Log the final message's content and token count in detail
+        if final_msg and isinstance(final_msg.content, str):
+            final_msg_content = final_msg.content
+            logger.error(f"Final message token count: {token_counts[-1]}")
+            logger.error(f"Final message type: {final_msg.type}")
+            logger.error(f"Final message content (first 1000 chars): {final_msg_content[:1000]}")
+            logger.error(f"Final message length: {len(final_msg_content)} chars")
+        raise  # Re-raise the exception after logging
 
     if system_msg and ind_prev_msg_start <= len(history_msgs):
         final_messages.append(system_msg)

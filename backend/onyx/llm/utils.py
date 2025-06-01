@@ -142,7 +142,7 @@ def _build_content(
         if file.file_type
         in (
             ChatFileType.PLAIN_TEXT,
-            ChatFileType.CSV,
+            #ChatFileType.CSV,
             ChatFileType.USER_KNOWLEDGE,
         )
     ]

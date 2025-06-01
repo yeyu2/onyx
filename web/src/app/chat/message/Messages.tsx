@@ -6,6 +6,10 @@ import {
   FiChevronLeft,
   FiTool,
   FiGlobe,
+  FiDatabase,
+  FiGrid,
+  FiFileText,
+  FiFile,
 } from "react-icons/fi";
 import { FeedbackType } from "../types";
 import React, {
@@ -89,6 +93,59 @@ const TOOLS_WITH_CUSTOM_HANDLING = [
   IMAGE_GENERATION_TOOL_NAME,
 ];
 
+function DatasetFileDisplay({
+  files,
+  alignBubble,
+}: {
+  files: FileDescriptor[];
+  alignBubble?: boolean;
+}) {
+  // Filter only dataset files
+  const datasetFiles = files.filter(file => file.metadata?.isDataset === true);
+  
+  // Debug log
+  console.log('Dataset files detected:', datasetFiles.map(file => ({
+    id: file.id,
+    name: file.name,
+    type: file.type,
+    isDataset: file.metadata?.isDataset
+  })));
+  
+  if (datasetFiles.length === 0) return null;
+
+  return (
+    <div className={`${alignBubble && "ml-auto"} mt-2 auto mb-4`}>
+      <div className="p-3 border border-border rounded-md bg-background-light">
+        <div className="flex items-center mb-2">
+          <FiDatabase className="text-text-muted mr-2" size={16} />
+          <span className="text-sm font-medium">Dataset Files</span>
+        </div>
+        <div className="space-y-1">
+          {datasetFiles.map((file) => (
+            <div key={file.id} className="flex items-center py-1 px-2 text-sm text-text-dark rounded hover:bg-background-secondary">
+              {file.name?.endsWith('.csv') ? (
+                <FiGrid className="mr-2 text-text-muted" size={14} />
+              ) : file.name?.endsWith('.json') ? (
+                <FiFileText className="mr-2 text-text-muted" size={14} />
+              ) : file.name?.endsWith('.xlsx') || file.name?.endsWith('.xls') ? (
+                <FiGrid className="mr-2 text-text-muted" size={14} />
+              ) : (
+                <FiFile className="mr-2 text-text-muted" size={14} />
+              )}
+              <span className="truncate">{file.name}</span>
+              <span className="ml-auto text-xs text-text-muted">
+                {file.metadata?.fileSize 
+                  ? `${(file.metadata.fileSize / 1024).toFixed(1)} KB` 
+                  : ''}
+              </span>
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function FileDisplay({
   files,
   alignBubble,
@@ -100,15 +157,29 @@ function FileDisplay({
 }) {
   const [close, setClose] = useState(true);
   const [expandedKnowledge, setExpandedKnowledge] = useState(false);
-  const imageFiles = files.filter((file) => file.type === ChatFileType.IMAGE);
-  const textFiles = files.filter(
+  
+  // Filter out dataset files to handle them separately
+  const nonDatasetFiles = files.filter(file => !file.metadata?.isDataset);
+  const datasetFiles = files.filter(file => file.metadata?.isDataset === true);
+  
+  // Get specific file types from non-dataset files
+  const imageFiles = nonDatasetFiles.filter((file) => file.type === ChatFileType.IMAGE);
+  const textFiles = nonDatasetFiles.filter(
     (file) => file.type == ChatFileType.PLAIN_TEXT
   );
-
-  const csvImgFiles = files.filter((file) => file.type == ChatFileType.CSV);
+  const csvImgFiles = nonDatasetFiles.filter((file) => file.type == ChatFileType.CSV);
+  
+  // Check if we have any dataset files
+  const hasDatasetFiles = files.some(file => file.metadata?.isDataset);
 
   return (
     <>
+      {/* First render dataset files if present - only show names, not content */}
+      {hasDatasetFiles && (
+        <DatasetFileDisplay files={files} alignBubble={alignBubble} />
+      )}
+      
+      {/* Then render regular files as before */}
       {textFiles && textFiles.length > 0 && (
         <div
           id="onyx-file"
@@ -141,31 +212,20 @@ function FileDisplay({
           </div>
         </div>
       )}
+      
+      {/* For CSV files, just show file names without preview for all files */}
       {csvImgFiles && csvImgFiles.length > 0 && (
         <div className={` ${alignBubble && "ml-auto"} mt-2 auto mb-4`}>
           <div className="flex flex-col gap-2">
-            {csvImgFiles.map((file) => {
-              return (
-                <div key={file.id} className="w-fit">
-                  {close ? (
-                    <>
-                      <ToolResult
-                        csvFileDescriptor={file}
-                        close={() => setClose(false)}
-                        contentComponent={CsvContent}
-                      />
-                    </>
-                  ) : (
-                    <DocumentPreview
-                      open={() => setClose(true)}
-                      fileName={file.name || file.id}
-                      maxWidth="max-w-64"
-                      alignBubble={alignBubble}
-                    />
-                  )}
-                </div>
-              );
-            })}
+            {csvImgFiles.map((file) => (
+              <div key={file.id} className="w-fit">
+                <DocumentPreview
+                  fileName={file.name || file.id}
+                  maxWidth="max-w-64"
+                  alignBubble={alignBubble}
+                />
+              </div>
+            ))}
           </div>
         </div>
       )}

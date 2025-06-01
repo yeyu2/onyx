@@ -34,10 +34,14 @@ class LLMConfig(BaseModel):
 
 def log_prompt(prompt: LanguageModelInput) -> None:
     if isinstance(prompt, list):
+        logger.debug(f"============= FULL PROMPT START (Contains {len(prompt)} messages) =============")
+        total_tokens = 0
+        
         for ind, msg in enumerate(prompt):
             if isinstance(msg, AIMessageChunk):
                 if msg.content:
                     log_msg = msg.content
+                    logger.debug(f"Message {ind} ({msg.__class__.__name__}):\n{log_msg}")
                 elif msg.tool_call_chunks:
                     log_msg = "Tool Calls: " + str(
                         [
@@ -49,13 +53,29 @@ def log_prompt(prompt: LanguageModelInput) -> None:
                             for tool_call in msg.tool_call_chunks
                         ]
                     )
+                    logger.debug(f"Message {ind} ({msg.__class__.__name__}):\n{log_msg}")
                 else:
                     log_msg = ""
-                logger.debug(f"Message {ind}:\n{log_msg}")
+                    logger.debug(f"Message {ind} ({msg.__class__.__name__}):\n{log_msg}")
             else:
-                logger.debug(f"Message {ind}:\n{msg.content}")
-    if isinstance(prompt, str):
-        logger.debug(f"Prompt:\n{prompt}")
+                # For regular messages, get the content and log completely (no truncation)
+                if hasattr(msg, 'content'):
+                    content = msg.content
+                    if isinstance(content, str):
+                        logger.debug(f"Message {ind} ({msg.__class__.__name__}, {msg.type}, {len(content)} chars):\n{content}")
+                    else:
+                        logger.debug(f"Message {ind} ({msg.__class__.__name__}, {msg.type}): [Non-string content]")
+                else:
+                    logger.debug(f"Message {ind} ({msg.__class__.__name__}): [No content attribute]")
+        
+        logger.debug(f"============= FULL PROMPT END =============")
+        
+    elif isinstance(prompt, str):
+        logger.debug(f"============= FULL STRING PROMPT START ({len(prompt)} chars) =============")
+        logger.debug(prompt)
+        logger.debug(f"============= FULL STRING PROMPT END =============")
+    else:
+        logger.debug(f"Unknown prompt type: {type(prompt)}")
 
 
 class LLM(abc.ABC):
