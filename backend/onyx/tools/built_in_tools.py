@@ -16,6 +16,7 @@ from onyx.tools.tool_implementations.internet_search.internet_search_tool import
     InternetSearchTool,
 )
 from onyx.tools.tool_implementations.search.search_tool import SearchTool
+from onyx.tools.tool_implementations.weather.weather_tool import WeatherTool
 from onyx.tools.tool import Tool
 from onyx.utils.logger import setup_logger
 
@@ -44,6 +45,12 @@ BUILT_IN_TOOLS: list[InCodeToolInfo] = [
         ),
         in_code_tool_id=ImageGenerationTool.__name__,
         display_name=ImageGenerationTool._DISPLAY_NAME,
+    ),
+    InCodeToolInfo(
+        cls=WeatherTool,
+        description="The Weather Action allows the assistant to get weather information for any location using simulated data. (For Test Only)",
+        in_code_tool_id=WeatherTool.__name__,
+        display_name=WeatherTool._DISPLAY_NAME,
     ),
     # don't show the InternetSearchTool as an option if BING_API_KEY is not available
     *(

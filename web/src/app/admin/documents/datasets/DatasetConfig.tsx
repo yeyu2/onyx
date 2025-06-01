@@ -56,7 +56,7 @@ export default function DatasetConfig() {
               id="basePath"
               value={basePath}
               onChange={(e) => setBasePath(e.target.value)}
-              placeholder="/datasets/"
+              placeholder="~/datasets/"
               className="w-full"
             />
             <p className="text-sm text-gray-500">

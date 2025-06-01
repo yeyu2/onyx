@@ -2,12 +2,13 @@ import { Persona } from "@/app/admin/assistants/interfaces";
 import { AssistantIcon } from "@/components/assistants/AssistantIcon";
 import { useSortable } from "@dnd-kit/sortable";
 import React from "react";
-import { FiImage, FiSearch } from "react-icons/fi";
+import { FiImage, FiSearch, FiCloud } from "react-icons/fi";
 import { MdDragIndicator } from "react-icons/md";
 
 import { Badge } from "../ui/badge";
 import { IIMAGE_GENERATION_TOOL_ID } from "@/app/chat/tools/constants";
 import { SEARCH_TOOL_ID } from "@/app/chat/tools/constants";
+import { WEATHER_TOOL_ID } from "@/app/chat/tools/constants";
 
 export const AssistantCard = ({
   assistant,
@@ -32,6 +33,13 @@ export const AssistantCard = ({
           <>
             <FiImage className="h-3 w-3 my-auto" />
             <span>Image Gen</span>
+          </>
+        );
+      case WEATHER_TOOL_ID:
+        return (
+          <>
+            <FiCloud className="h-3 w-3 my-auto" />
+            <span>Weather</span>
           </>
         );
       default:

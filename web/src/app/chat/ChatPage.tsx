@@ -150,7 +150,7 @@ export enum UploadIntent {
 
 // Dataset configuration - can be changed to dynamically set dataset file paths
 export const DATASET_CONFIG = {
-  basePath: "/datasets/", // Default path for dataset files (can be modified at runtime)
+  basePath: "./datasets/", // Default path for dataset files (can be modified at runtime)
 };
 
 /**

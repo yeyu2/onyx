@@ -151,6 +151,9 @@ from onyx.tools.tool_implementations.search.search_tool import SearchTool
 from onyx.tools.tool_implementations.search.search_tool import (
     SECTION_RELEVANCE_LIST_ID,
 )
+from onyx.tools.tool_implementations.weather.weather_tool import (
+    WEATHER_RESPONSE_ID,
+)
 from onyx.tools.tool_runner import ToolCallFinalResult
 from onyx.utils.logger import setup_logger
 from onyx.utils.long_term_log import LongTermLogger
@@ -601,6 +604,10 @@ def _process_tool_response(
             db_session=db_session,
         )
         yield info.qa_docs_response
+    elif packet.id == WEATHER_RESPONSE_ID:
+        # Weather tool doesn't return documents, just pass through the response
+        # The weather data will be included in the LLM context via build_next_prompt
+        pass
     elif packet.id == CUSTOM_TOOL_RESPONSE_ID:
         custom_tool_response = cast(CustomToolCallSummary, packet.response)
         response_type = custom_tool_response.response_type

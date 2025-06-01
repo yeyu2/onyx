@@ -106,6 +106,10 @@ function findInternetSearchTool(tools: ToolSnapshot[]) {
   return tools.find((tool) => tool.in_code_tool_id === "InternetSearchTool");
 }
 
+function findWeatherTool(tools: ToolSnapshot[]) {
+  return tools.find((tool) => tool.in_code_tool_id === "WeatherTool");
+}
+
 function SubLabel({ children }: { children: string | JSX.Element }) {
   return (
     <div
@@ -214,12 +218,14 @@ export function AssistantEditor({
   const searchTool = findSearchTool(tools);
   const imageGenerationTool = findImageGenerationTool(tools);
   const internetSearchTool = findInternetSearchTool(tools);
+  const weatherTool = findWeatherTool(tools);
 
   const customTools = tools.filter(
     (tool) =>
       tool.in_code_tool_id !== searchTool?.in_code_tool_id &&
       tool.in_code_tool_id !== imageGenerationTool?.in_code_tool_id &&
-      tool.in_code_tool_id !== internetSearchTool?.in_code_tool_id
+      tool.in_code_tool_id !== internetSearchTool?.in_code_tool_id &&
+      tool.in_code_tool_id !== weatherTool?.in_code_tool_id
   );
 
   const availableTools = [
@@ -227,6 +233,7 @@ export function AssistantEditor({
     ...(searchTool ? [searchTool] : []),
     ...(imageGenerationTool ? [imageGenerationTool] : []),
     ...(internetSearchTool ? [internetSearchTool] : []),
+    ...(weatherTool ? [weatherTool] : []),
   ];
   const enabledToolsMap: { [key: number]: boolean } = {};
   availableTools.forEach((tool) => {
@@ -1118,6 +1125,16 @@ export function AssistantEditor({
                             name={`enabled_tools_map.${internetSearchTool.id}`}
                             label={internetSearchTool.display_name}
                             subtext="Access real-time information and search the web for up-to-date results"
+                          />
+                        </>
+                      )}
+
+                      {weatherTool && (
+                        <>
+                          <BooleanFormField
+                            name={`enabled_tools_map.${weatherTool.id}`}
+                            label={weatherTool.display_name}
+                            subtext="Access real-time weather information"
                           />
                         </>
                       )}
