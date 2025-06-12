@@ -17,6 +17,7 @@ from onyx.tools.tool_implementations.internet_search.internet_search_tool import
 )
 from onyx.tools.tool_implementations.search.search_tool import SearchTool
 from onyx.tools.tool_implementations.weather.weather_tool import WeatherTool
+from onyx.tools.tool_implementations.code_interpreter.code_interpreter_tool import CodeInterpreterTool
 from onyx.tools.tool import Tool
 from onyx.utils.logger import setup_logger
 
@@ -51,6 +52,12 @@ BUILT_IN_TOOLS: list[InCodeToolInfo] = [
         description="The Weather Action allows the assistant to get weather information for any location using simulated data. (For Test Only)",
         in_code_tool_id=WeatherTool.__name__,
         display_name=WeatherTool._DISPLAY_NAME,
+    ),
+    InCodeToolInfo(
+        cls=CodeInterpreterTool,
+        description="The Code Interpreter Action allows the assistant to execute Python code in a safe sandboxed environment for calculations, data analysis, and visualizations.",
+        in_code_tool_id=CodeInterpreterTool.__name__,
+        display_name=CodeInterpreterTool._DISPLAY_NAME,
     ),
     # don't show the InternetSearchTool as an option if BING_API_KEY is not available
     *(
@@ -221,6 +228,62 @@ def auto_add_weather_tool_to_search_persona(db_session: Session) -> None:
         logger.notice("Completed adding WeatherTool to Search Persona.")
     else:
         logger.notice("WeatherTool already present in Search Persona.")
+
+
+def get_code_interpreter_tool(db_session: Session) -> ToolDBModel | None:
+    """
+    Retrieves the CodeInterpreterTool from the BUILT_IN_TOOLS list.
+    """
+    code_interpreter_tool_id = next(
+        (
+            tool["in_code_tool_id"]
+            for tool in BUILT_IN_TOOLS
+            if tool["cls"].__name__ == CodeInterpreterTool.__name__
+        ),
+        None,
+    )
+
+    if not code_interpreter_tool_id:
+        return None
+
+    code_interpreter_tool = db_session.execute(
+        select(ToolDBModel).where(ToolDBModel.in_code_tool_id == code_interpreter_tool_id)
+    ).scalar_one_or_none()
+
+    return code_interpreter_tool
+
+
+def auto_add_code_interpreter_tool_to_search_persona(db_session: Session) -> None:
+    """
+    Automatically adds the CodeInterpreterTool to the Search persona (ID 0) so it can handle
+    code execution, data analysis, and mathematical computation questions. This makes the 
+    code interpreter tool implicitly available to the search assistant without requiring 
+    manual configuration.
+    """
+    # Fetch the CodeInterpreterTool from the database
+    code_interpreter_tool = get_code_interpreter_tool(db_session)
+
+    if not code_interpreter_tool:
+        logger.notice("CodeInterpreterTool not found in the database. Skipping auto-assignment.")
+        return
+
+    # Fetch the Search persona (ID 0)
+    search_persona = db_session.execute(
+        select(Persona).where(Persona.id == 0)
+    ).scalar_one_or_none()
+
+    if not search_persona:
+        logger.notice("Search persona (ID 0) not found. Skipping code interpreter tool assignment.")
+        return
+
+    # Add the CodeInterpreterTool to the Search persona if it's not already there
+    if code_interpreter_tool not in search_persona.tools:
+        search_persona.tools.append(code_interpreter_tool)
+        logger.notice(f"Added CodeInterpreterTool to Search Persona (ID: {search_persona.id})")
+        db_session.commit()
+        logger.notice("Completed adding CodeInterpreterTool to Search Persona.")
+    else:
+        logger.notice("CodeInterpreterTool already present in Search Persona.")
 
 
 _built_in_tools_cache: dict[str, Type[Tool]] | None = None

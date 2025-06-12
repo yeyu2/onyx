@@ -1,0 +1,31 @@
+INFO:__main__:Allowed base path for file operations: /Users/yeyu/Documents/client_project/onyx_doug/onyx_dev2/onyx/code_sandbox/datasets
+INFO:__main__:Starting Code Execution Service on 127.0.0.1:8001
+INFO:main:Allowed base path for file operations: /Users/yeyu/Documents/client_project/onyx_doug/onyx_dev2/onyx/code_sandbox/datasets
+INFO:     Started server process [88861]
+INFO:     Waiting for application startup.
+INFO:     Application startup complete.
+INFO:     Uvicorn running on http://127.0.0.1:8001 (Press CTRL+C to quit)
+INFO:     127.0.0.1:51368 - "GET /health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52314 - "GET /health HTTP/1.1" 200 OK
+INFO:main:Executing python code...
+INFO:main:Code execution completed. Success: True, Time: 0.57s
+INFO:main:Response: success=True output='Number of unique airlines: 27\n' error=None execution_time=0.5739479064941406
+Executing code: import pandas as pd
+
+# Load the dataset with the correct header row
+# The header is in the second row (index 1) based on the provided information
+
+df = pd.read_excel("./datasets/airlines.xlsx", sheet_name="Sheet 1 - MOCK_DATA (1)", header=1)
+
+# Get the unique airlines
+unique_airlines = df["airline_name"].unique()
+
+# Count the number of unique airlines
+num_airlines = len(unique_airlines)
+
+print(f"Number of unique airlines: {num_airlines}")
+INFO:     127.0.0.1:52457 - "POST /execute HTTP/1.1" 200 OK
+INFO:     Shutting down
+INFO:     Waiting for application shutdown.
+INFO:     Application shutdown complete.
+INFO:     Finished server process [88861]

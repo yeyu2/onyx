@@ -3,6 +3,7 @@ import { useDropzone } from 'react-dropzone';
 import { FiUpload, FiX, FiLoader, FiFile, FiFileText, FiGrid, FiTrash2 } from 'react-icons/fi';
 import { Modal } from '@/components/Modal';
 import { UploadIntent } from '../../ChatPage';
+import * as XLSX from 'xlsx';
 
 interface DatasetUploadModalProps {
   isOpen: boolean;
@@ -21,6 +22,16 @@ interface SchemaInfo {
   sampleData: string;
   rowCount: number;
   description: string;
+  // Excel-specific fields
+  sheets?: Array<{
+    name: string;
+    columns: Array<{name: string, type: string}>;
+    rowCount: number;
+    sampleData: string;
+    rawHeaders?: string;
+  }>;
+  datamap?: string; // Special section for datamap tabs
+  rawHeaders?: string; // First few rows as fallback when structured detection fails
 }
 
 export const DatasetUploadModal: React.FC<DatasetUploadModalProps> = ({
@@ -91,6 +102,453 @@ export const DatasetUploadModal: React.FC<DatasetUploadModalProps> = ({
       return <FiGrid className="mr-2" />;
     }
     return <FiFile className="mr-2" />;
+  };
+
+  // Helper function to infer column type from a value
+  const inferColumnType = (value: any): string => {
+    if (value === null || value === undefined || value === '') {
+      return 'string';
+    }
+    
+    const stringValue = String(value).trim();
+    
+    // Check for number
+    if (!isNaN(Number(stringValue)) && stringValue !== '') {
+      return Number.isInteger(Number(stringValue)) ? 'integer' : 'number';
+    }
+    
+    // Check for date patterns
+    if (/^\d{4}-\d{2}-\d{2}/.test(stringValue) || 
+        /^\d{1,2}\/\d{1,2}\/\d{4}/.test(stringValue) ||
+        /^\d{1,2}-\d{1,2}-\d{4}/.test(stringValue)) {
+      return 'date';
+    }
+    
+    // Check for boolean
+    if (/^(true|false|yes|no|y|n)$/i.test(stringValue)) {
+      return 'boolean';
+    }
+    
+    return 'string';
+  };
+
+  // Helper function to check if a sheet name indicates a datamap
+  const isDatamapSheet = (sheetName: string): boolean => {
+    const name = sheetName.toLowerCase();
+    const datamapIndicators = [
+      // Primary datamap indicators
+      'datamap', 'data_map', 'data-map', 'data map',
+      
+      // Overview and summary sheets
+      'overview', 'summary', 'readme', 'read_me', 'read-me',
+      
+      // Description and documentation
+      'description', 'descriptions', 'desc', 'metadata', 'meta_data', 'meta-data',
+      'schema', 'structure', 'documentation', 'docs', 'info', 'information',
+      
+      // Data dictionaries and codebooks
+      'dictionary', 'data_dictionary', 'data-dictionary', 'codebook', 'code_book', 
+      'code-book', 'legend', 'key', 'lookup', 'reference',
+      
+      // Field definitions and variables
+      'fields', 'field_definitions', 'field-definitions', 'variables', 'var_definitions',
+      'var-definitions', 'column_definitions', 'column-definitions', 'definitions',
+      
+      // Navigation and index sheets
+      'index', 'contents', 'toc', 'table_of_contents', 'table-of-contents',
+      'navigation', 'nav', 'guide', 'help',
+      
+      // General information sheets
+      'about', 'notes', 'comments', 'instructions', 'details', 'explanation',
+      'background', 'context', 'methodology', 'methods'
+    ];
+    
+    // Check for exact matches or if the sheet name contains any of these indicators
+    return datamapIndicators.some(indicator => 
+      name === indicator || name.includes(indicator) || 
+      // Also check if the indicator is a significant part of the name
+      (name.length <= indicator.length * 2 && name.includes(indicator))
+    );
+  };
+
+  // Helper function to check if a sheet contains structured data
+  const isStructuredDataSheet = (jsonData: any[][], sheetName: string): boolean => {
+    // Skip obviously non-data sheets
+    const name = sheetName.toLowerCase();
+    const nonDataIndicators = [
+      'cover', 'title', 'intro', 'instructions', 'notes', 'disclaimer',
+      'chart', 'graph', 'plot', 'visual', 'image',
+      'template', 'format', 'example', 'sample'
+    ];
+    
+    if (nonDataIndicators.some(indicator => name.includes(indicator))) {
+      return false;
+    }
+    
+    // Must have some rows
+    if (jsonData.length < 2) return false;
+    
+    // Check if first row looks like headers (consistent data types in subsequent rows)
+    const headers = jsonData[0] || [];
+    const dataRows = jsonData.slice(1, Math.min(6, jsonData.length)); // Check first 5 data rows
+    
+    // Must have reasonable number of columns (between 2-50)
+    if (headers.length < 2 || headers.length > 50) return false;
+    
+    // Check if we have actual data (not mostly empty)
+    let nonEmptyRows = 0;
+    for (const row of dataRows) {
+      const nonEmptyCells = row?.filter(cell => 
+        cell !== null && cell !== undefined && String(cell).trim() !== ''
+      ).length || 0;
+      
+      if (nonEmptyCells >= Math.max(2, headers.length * 0.3)) {
+        nonEmptyRows++;
+      }
+    }
+    
+    // At least 50% of sample rows should have reasonable data
+    return nonEmptyRows >= Math.max(1, dataRows.length * 0.5);
+  };
+
+  // Extract schema information from an Excel file
+  const extractExcelSchema = async (file: File): Promise<SchemaInfo> => {
+    console.log(`[DEBUG] Starting Excel schema extraction for file: ${file.name}, size: ${file.size} bytes`);
+    
+    // Skip detailed processing for very large files
+    const isLargeFile = file.size > 50 * 1024 * 1024; // 50MB threshold
+    if (isLargeFile) {
+      console.log(`[DEBUG] Large Excel file detected (${(file.size / 1024 / 1024).toFixed(1)}MB), using basic metadata only`);
+      return {
+        columns: [],
+        sampleData: "[]",
+        rowCount: 0,
+        description: `Large Excel file (${(file.size / 1024 / 1024).toFixed(1)}MB) - detailed schema extraction skipped for performance`,
+        sheets: []
+      };
+    }
+    
+    return new Promise((resolve) => {
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        try {
+          const data = e.target?.result as ArrayBuffer;
+          if (!data) {
+            console.log(`[DEBUG] Empty data for Excel file: ${file.name}`);
+            resolve({
+              columns: [],
+              sampleData: "[]",
+              rowCount: 0,
+              description: `Empty Excel file: ${file.name}`,
+              sheets: []
+            });
+            return;
+          }
+
+          // Parse the Excel file
+          const workbook = XLSX.read(data, { type: 'array' });
+          console.log(`[DEBUG] Excel file ${file.name} has ${workbook.SheetNames.length} sheets: ${workbook.SheetNames.join(', ')}`);
+
+          const sheets: Array<{
+            name: string;
+            columns: Array<{name: string, type: string}>;
+            rowCount: number;
+            sampleData: string;
+            rawHeaders?: string;
+          }> = [];
+          
+          let totalRows = 0;
+          let allColumns: Array<{name: string, type: string}> = [];
+          let combinedSampleData: any[] = [];
+          let datamap = '';
+          let dataSheetCount = 0;
+
+          // Process each sheet with intelligent filtering
+          workbook.SheetNames.forEach((sheetName: string, index: number) => {
+            console.log(`[DEBUG] Processing sheet ${index + 1}/${workbook.SheetNames.length}: ${sheetName}`);
+            
+            const worksheet = workbook.Sheets[sheetName];
+            if (!worksheet) {
+              console.log(`[DEBUG] Sheet ${sheetName} is empty or invalid`);
+              return;
+            }
+
+            // Convert sheet to JSON (limit to first 1000 rows for performance)
+            const range = XLSX.utils.decode_range(worksheet['!ref'] || 'A1:A1');
+            const maxRows = Math.min(1000, range.e.r + 1);
+            const jsonData = XLSX.utils.sheet_to_json(worksheet, { 
+              header: 1, 
+              range: { s: { c: 0, r: 0 }, e: { c: range.e.c, r: maxRows - 1 } }
+            }) as any[][];
+            
+            console.log(`[DEBUG] Sheet ${sheetName} has ${jsonData.length} rows (limited to first ${maxRows})`);
+
+            // Check if this is a datamap sheet
+            if (isDatamapSheet(sheetName)) {
+              console.log(`[DEBUG] Sheet ${sheetName} identified as datamap sheet`);
+              
+              // Convert the entire sheet to a readable format for the datamap
+              const fullSheetData = XLSX.utils.sheet_to_json(worksheet, { header: 1 });
+              
+              console.log(`[DEBUG] Datamap sheet ${sheetName} has ${fullSheetData.length} rows`);
+              
+              datamap = `DATAMAP SHEET: ${sheetName}\n`;
+              datamap += `=====================================\n`;
+              
+              // Extract all content in a structured way
+              let hasContent = false;
+              fullSheetData.forEach((row: any, rowIndex: number) => {
+                if (Array.isArray(row) && row.length > 0) {
+                  // Filter out completely empty cells but keep cells with spaces or special chars
+                  const contentCells = row.map(cell => {
+                    if (cell === null || cell === undefined) return '';
+                    return String(cell).trim();
+                  }).filter(cell => cell.length > 0);
+                  
+                  if (contentCells.length > 0) {
+                    hasContent = true;
+                    
+                    // Format differently based on content structure
+                    if (contentCells.length === 1) {
+                      // Single cell - likely a title or section header
+                      datamap += `\n${contentCells[0]}\n`;
+                      if (contentCells[0] && contentCells[0].length > 2) {
+                        datamap += `${'-'.repeat(Math.min(contentCells[0].length, 40))}\n`;
+                      }
+                    } else if (contentCells.length === 2) {
+                      // Two cells - likely key-value pairs or field definitions
+                      datamap += `${contentCells[0] || ''}: ${contentCells[1] || ''}\n`;
+                    } else {
+                      // Multiple cells - format as table row
+                      datamap += `${contentCells.join(' | ')}\n`;
+                    }
+                  }
+                }
+              });
+              
+              if (!hasContent) {
+                datamap += `(This datamap sheet appears to be empty or contains no readable content)\n`;
+                console.log(`[DEBUG] Datamap sheet ${sheetName} appears to be empty`);
+              } else {
+                console.log(`[DEBUG] Successfully extracted datamap content from ${sheetName}, length: ${datamap.length} characters`);
+              }
+              
+              datamap += `\n=====================================\n\n`;
+              
+              // Add the raw content as well for comprehensive coverage
+              const rawDatamapContent = (fullSheetData
+                .filter(row => row && Array.isArray(row) && row.length > 0) as any[][])
+                .map((row: any[], index: number) => {
+                  const rowContent = row.map((cell: any) => 
+                    cell !== null && cell !== undefined ? String(cell).trim() : ''
+                  ).join('\t');
+                  return rowContent.trim() ? `Row ${index + 1}: ${rowContent}` : '';
+                })
+                .filter(line => line.length > 0)
+                .join('\n');
+              
+              // Add basic sheet info but include the raw content as well
+              sheets.push({
+                name: sheetName,
+                columns: [],
+                rowCount: fullSheetData.length,
+                sampleData: "[]",
+                rawHeaders: rawDatamapContent || undefined
+              });
+              return;
+            }
+
+            // Check if this is structured data
+            if (!isStructuredDataSheet(jsonData, sheetName)) {
+              console.log(`[DEBUG] Sheet ${sheetName} does not appear to contain structured data, skipping detailed schema extraction`);
+              
+              // Even though it's not structured, capture the first few rows as raw headers for fallback analysis
+              const rawHeaderRows: string[] = [];
+              const maxHeaderRows = Math.min(4, jsonData.length);
+              for (let i = 0; i < maxHeaderRows; i++) {
+                const row = jsonData[i];
+                if (row && Array.isArray(row)) {
+                  const rowString = row.map(cell => 
+                    cell !== null && cell !== undefined ? String(cell).trim() : ''
+                  ).join('\t');
+                  if (rowString.trim()) {
+                    rawHeaderRows.push(`Row ${i + 1}: ${rowString}`);
+                  }
+                }
+              }
+              const rawHeaders = rawHeaderRows.length > 0 ? rawHeaderRows.join('\n') : undefined;
+              
+              if (rawHeaders) {
+                console.log(`[DEBUG] Captured raw headers for ${sheetName}:`, rawHeaders);
+              } else {
+                console.log(`[DEBUG] No usable raw headers found for ${sheetName}`);
+              }
+              
+              sheets.push({
+                name: sheetName,
+                columns: [],
+                rowCount: jsonData.length,
+                sampleData: "[]",
+                rawHeaders
+              });
+              return;
+            }
+
+            dataSheetCount++;
+            console.log(`[DEBUG] Sheet ${sheetName} identified as structured data sheet`);
+
+            if (jsonData.length === 0) {
+              sheets.push({
+                name: sheetName,
+                columns: [],
+                rowCount: 0,
+                sampleData: "[]",
+                rawHeaders: undefined
+              });
+              return;
+            }
+
+            // Get headers (first row)
+            const headers = jsonData[0]?.map((header: any) => 
+              String(header || `Column_${Math.random().toString(36).substr(2, 9)}`).trim()
+            ) || [];
+            
+            // Get data rows (skip header)
+            const dataRows = jsonData.slice(1).filter(row => 
+              row && Array.isArray(row) && row.some(cell => cell !== null && cell !== undefined && cell !== '')
+            );
+            
+            console.log(`[DEBUG] Sheet ${sheetName} headers: ${JSON.stringify(headers)}`);
+            console.log(`[DEBUG] Sheet ${sheetName} has ${dataRows.length} data rows`);
+
+            // Sample first few rows for type inference and preview
+            const sampleRows: any[] = [];
+            const maxSampleRows = Math.min(3, dataRows.length); // Reduced to 3 for performance
+            
+            for (let i = 0; i < maxSampleRows; i++) {
+              const row = dataRows[i];
+              if (row) {
+                const rowObj: any = {};
+                headers.forEach((header: string, colIndex: number) => {
+                  rowObj[header] = row[colIndex];
+                });
+                sampleRows.push(rowObj);
+              }
+            }
+
+            // Infer column types
+            const columns = headers.map((header: string) => {
+              const values = sampleRows.map(row => row[header]).filter(val => 
+                val !== null && val !== undefined && val !== ''
+              );
+              
+              let type = 'string';
+              if (values.length > 0) {
+                // Use the most common type among the sample values
+                const typeVotes: { [key: string]: number } = {};
+                values.forEach(value => {
+                  const inferredType = inferColumnType(value);
+                  typeVotes[inferredType] = (typeVotes[inferredType] || 0) + 1;
+                });
+                
+                // Get the type with the most votes
+                type = Object.keys(typeVotes).reduce((a, b) => 
+                  (typeVotes[a] || 0) > (typeVotes[b] || 0) ? a : b
+                );
+              }
+              
+              return { name: header, type };
+            });
+
+            const sheetInfo = {
+              name: sheetName,
+              columns,
+              rowCount: dataRows.length,
+              sampleData: JSON.stringify(sampleRows, null, 2),
+              rawHeaders: undefined
+            };
+
+            sheets.push(sheetInfo);
+            totalRows += dataRows.length;
+
+            // For the overall file schema, use the first data sheet or the largest data sheet
+            if (allColumns.length === 0 || dataRows.length > combinedSampleData.length) {
+              allColumns = columns;
+              combinedSampleData = sampleRows;
+            }
+          });
+
+          // If no data sheets found, use basic info
+          if (dataSheetCount === 0) {
+            console.log(`[DEBUG] No structured data sheets found in ${file.name}`);
+            const description = `Excel file with ${workbook.SheetNames.length} sheet${workbook.SheetNames.length !== 1 ? 's' : ''} ` +
+                               `(${workbook.SheetNames.join(', ')}) - no structured data sheets detected`;
+            
+            // Consolidate raw headers from all sheets for fallback analysis
+            const allRawHeaders = sheets
+              .filter(sheet => sheet.rawHeaders)
+              .map(sheet => `SHEET: ${sheet.name}\n${sheet.rawHeaders}`)
+              .join('\n\n');
+            
+            resolve({
+              columns: [],
+              sampleData: "[]",
+              rowCount: 0,
+              description,
+              sheets,
+              datamap: datamap || undefined,
+              rawHeaders: allRawHeaders || undefined
+            });
+            return;
+          }
+
+          const description = `Excel file with ${workbook.SheetNames.length} sheet${workbook.SheetNames.length !== 1 ? 's' : ''} ` +
+                             `(${workbook.SheetNames.join(', ')}) - ${dataSheetCount} data sheet${dataSheetCount !== 1 ? 's' : ''}, ${totalRows} total rows` +
+                             (datamap ? ` - includes datamap information` : '');
+
+          // Include raw headers from failed sheets for fallback analysis
+          const failedSheetHeaders = sheets
+            .filter(sheet => sheet.rawHeaders)
+            .map(sheet => `SHEET: ${sheet.name}\n${sheet.rawHeaders}`)
+            .join('\n\n');
+
+          const schemaResult: SchemaInfo = {
+            columns: allColumns,
+            sampleData: JSON.stringify(combinedSampleData, null, 2),
+            rowCount: totalRows,
+            description,
+            sheets,
+            datamap: datamap || undefined,
+            rawHeaders: failedSheetHeaders || undefined
+          };
+
+          console.log(`[DEBUG] Final Excel schema result: ${description}`);
+          console.log(`[DEBUG] Data sheets processed: ${dataSheetCount}/${workbook.SheetNames.length}`);
+          console.log(`[DEBUG] Datamap found: ${!!datamap}`);
+          if (datamap) {
+            console.log(`[DEBUG] Datamap content length: ${datamap.length} characters`);
+            console.log(`[DEBUG] Datamap preview (first 200 chars): ${datamap.substring(0, 200)}...`);
+          }
+          if (failedSheetHeaders) {
+            console.log(`[DEBUG] Raw headers captured from ${sheets.filter(s => s.rawHeaders).length} failed sheets`);
+          }
+
+          resolve(schemaResult);
+
+        } catch (error) {
+          console.error(`[DEBUG] Error parsing Excel file ${file.name}:`, error);
+          resolve({
+            columns: [],
+            sampleData: "[]",
+            rowCount: 0,
+            description: `Error parsing Excel file: ${file.name}`,
+            sheets: []
+          });
+        }
+      };
+
+      reader.readAsArrayBuffer(file);
+    });
   };
 
   // Extract schema information from a CSV file
@@ -183,10 +641,10 @@ export const DatasetUploadModal: React.FC<DatasetUploadModalProps> = ({
             const value = row[colName!];
             if (value !== undefined && value !== '') {
               if (!isNaN(Number(value))) {
-                // Check if it's a whole number
-                type = Number.isInteger(Number(value)) ? 'integer' : 'float';
+                // Check if it's a whole number - but we'll still call it 'number' for JS compatibility
+                type = 'number';
               } else if (/^\d{4}-\d{2}-\d{2}/.test(value)) {
-                type = 'date';
+                type = 'string'; // Date strings are still strings in JS
               } else if (/^(true|false)$/i.test(value)) {
                 type = 'boolean';
               } else {
@@ -249,9 +707,9 @@ export const DatasetUploadModal: React.FC<DatasetUploadModalProps> = ({
                 console.log(`[DEBUG] JSON field '${key}' has type: ${type}, value: ${JSON.stringify(value)}`);
                 
                 if (type === 'number') {
-                  type = Number.isInteger(value) ? 'integer' : 'float';
+                  type = 'number'; // Keep it as 'number' regardless of integer/float
                 } else if (value instanceof Date) {
-                  type = 'date';
+                  type = 'string'; // Dates are typically strings in JSON
                 }
                 
                 return { name: key, type: type as string };
@@ -269,9 +727,9 @@ export const DatasetUploadModal: React.FC<DatasetUploadModalProps> = ({
               console.log(`[DEBUG] JSON field '${key}' has type: ${type}, value: ${JSON.stringify(value)}`);
               
               if (type === 'number') {
-                type = Number.isInteger(value) ? 'integer' : 'float';
+                type = 'number'; // Keep it as 'number' regardless of integer/float
               } else if (value instanceof Date) {
-                type = 'date';
+                type = 'string'; // Dates are typically strings in JSON
               }
               
               return { name: key, type: type as string };
@@ -333,6 +791,9 @@ export const DatasetUploadModal: React.FC<DatasetUploadModalProps> = ({
         if (file.name.toLowerCase().endsWith('.csv')) {
           schemaInfo = await extractCsvSchema(file);
           console.log(`[DEBUG] CSV schema extraction complete for ${file.name}`);
+        } else if (file.name.toLowerCase().endsWith('.xlsx') || file.name.toLowerCase().endsWith('.xls')) {
+          schemaInfo = await extractExcelSchema(file);
+          console.log(`[DEBUG] Excel schema extraction complete for ${file.name}`);
         } else if (file.name.toLowerCase().endsWith('.json')) {
           schemaInfo = await extractJsonSchema(file);
           console.log(`[DEBUG] JSON schema extraction complete for ${file.name}`);
@@ -362,7 +823,9 @@ export const DatasetUploadModal: React.FC<DatasetUploadModalProps> = ({
           schema: {
             description: schemaInfo.description,
             rowCount: schemaInfo.rowCount,
-            columnCount: schemaInfo.columns.length
+            columnCount: schemaInfo.columns.length,
+            hasSheets: !!(schemaInfo.sheets && schemaInfo.sheets.length > 0),
+            hasDatamap: !!schemaInfo.datamap
           }
         });
         
@@ -541,4 +1004,4 @@ export const DatasetUploadModal: React.FC<DatasetUploadModalProps> = ({
       </div>
     </Modal>
   );
-}; 
+};

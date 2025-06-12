@@ -7,6 +7,7 @@
 
 # python
 .venv
+code_sandbox/.venv2
 .mypy_cache
 .idea
 

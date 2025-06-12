@@ -226,6 +226,7 @@ async def execute_code_endpoint(request: CodeExecutionRequest):
              logger.warning("Attempt to use file operations while EXEC_ALLOWED_BASE_PATH is not configured.")
              # Depending on policy, you might want to reject earlier or let safe_custom_open handle it.
 
+        print(f"Executing code: {request.code}")
         success, output, error, execution_time = execute_python_code(
             code=request.code,
             timeout=request.timeout
@@ -236,12 +237,14 @@ async def execute_code_endpoint(request: CodeExecutionRequest):
             logger.warning(f"Execution error: {error[:200]}...")
 
 
-        return CodeExecutionResponse(
+        response = CodeExecutionResponse(
             success=success,
             output=output,
             error=error,
             execution_time=execution_time
         )
+        logger.info(f"Response: {response}")
+        return response
 
     except Exception as e:
         logger.error(f"Error executing code: {str(e)}")
@@ -283,7 +286,7 @@ async def execute_file_endpoint(file_path: str):
 
 
 if __name__ == "__main__":
-    port = int(os.getenv("PORT", "8001"))
+    port = int(os.getenv("PORT", "8856"))
     host = os.getenv("HOST", "127.0.0.1")
     
     logger.info(f"Starting Code Execution Service on {host}:{port}")
@@ -296,9 +299,11 @@ if __name__ == "__main__":
     
     # Make sure your filename matches "main:app" (e.g. if this file is main.py)
     uvicorn.run(
-        "main:app", # Change "main" if your file is named differently
+        app, # Use app object directly instead of string reference
         host=host,
         port=port,
-        reload=True, # Be careful with reload in "production" if stateful (RESOLVED_ALLOWED_BASE_PATH is ok)
-        log_level="info"
+        reload=False, # Disabled reload to prevent service restarts during code execution
+        log_level="info",
+        access_log=True,
+        loop="asyncio"
     )

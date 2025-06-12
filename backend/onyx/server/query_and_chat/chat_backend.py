@@ -12,6 +12,7 @@ from uuid import UUID
 
 from fastapi import APIRouter
 from fastapi import Depends
+from fastapi import Form
 from fastapi import HTTPException
 from fastapi import Query
 from fastapi import Request
@@ -102,6 +103,8 @@ from onyx.utils.headers import get_custom_tool_additional_request_headers
 from onyx.utils.logger import setup_logger
 from onyx.utils.telemetry import create_milestone_and_report
 from shared_configs.contextvars import get_current_tenant_id
+from onyx.utils.dataset_utils import copy_file_to_sandbox
+from onyx.utils.dataset_utils import copy_multiple_files_to_sandbox
 
 RECENT_DOCS_FOLDER_ID = -1
 
@@ -660,10 +663,21 @@ def seed_chat_from_slack(
 @router.post("/file")
 def upload_files_for_chat(
     files: list[UploadFile],
+    # Optional fields for dataset handling
+    dataset: str = Form(None),  # "true" if these are dataset files
+    datasetMetadata: str = Form(None),  # JSON metadata for dataset files
     db_session: Session = Depends(get_session),
     user: User | None = Depends(current_user),
 ) -> dict[str, list[FileDescriptor]]:
-
+    
+    logger.notice(f"[DATASET_DEBUG] Upload endpoint called with {len(files)} files")
+    logger.notice(f"[DATASET_DEBUG] Dataset flag: {dataset}")
+    logger.notice(f"[DATASET_DEBUG] Dataset metadata: {datasetMetadata}")
+    
+    # Check if this is a dataset upload
+    is_dataset_upload = dataset == "true"
+    logger.notice(f"[DATASET_DEBUG] Is dataset upload: {is_dataset_upload}")
+    
     # NOTE(rkuo): Unify this with file_validation.py and extract_file_text.py
     # image_content_types = {"image/jpeg", "image/png", "image/webp"}
     # csv_content_types = {"text/csv"}
@@ -713,7 +727,13 @@ def upload_files_for_chat(
     file_store = get_default_file_store(db_session)
 
     file_info: list[tuple[str, str | None, ChatFileType]] = []
+    dataset_files_to_copy: list[tuple[str, str]] = []  # (file_id, file_name) pairs
+    
+    logger.notice(f"[DATASET_DEBUG] Processing {len(files)} files...")
+    
     for file in files:
+        logger.notice(f"[DATASET_DEBUG] Processing file: {file.filename}, content_type: {file.content_type}")
+        
         file_type = mime_type_to_chat_file_type(file.content_type)
 
         file_content = file.file.read()  # Read the file content
@@ -729,6 +749,8 @@ def upload_files_for_chat(
 
         # Store the file normally
         file_id = str(uuid.uuid4())
+        logger.notice(f"[DATASET_DEBUG] Generated file_id: {file_id} for {file.filename}")
+        
         file_store.save_file(
             file_name=file_id,
             content=file_content_io,
@@ -736,6 +758,14 @@ def upload_files_for_chat(
             file_origin=FileOrigin.CHAT_UPLOAD,
             file_type=new_content_type or file_type.value,
         )
+        logger.notice(f"[DATASET_DEBUG] File saved to file store: {file_id}")
+
+        # If this is a dataset file, add it to the list for copying to sandbox
+        if is_dataset_upload and file.filename:
+            dataset_files_to_copy.append((file_id, file.filename))
+            logger.notice(f"[DATASET_DEBUG] Added dataset file {file.filename} (ID: {file_id}) to copy list")
+        else:
+            logger.notice(f"[DATASET_DEBUG] File {file.filename} not marked as dataset (is_dataset_upload: {is_dataset_upload})")
 
         # 4) If the file is a doc, extract text and store that separately
         if file_type == ChatFileType.DOC:
@@ -759,53 +789,78 @@ def upload_files_for_chat(
         else:
             file_info.append((file_id, file.filename, file_type))
 
-        # 5) Create a user file for each uploaded file
-        user_files = create_user_files([file], RECENT_DOCS_FOLDER_ID, user, db_session)
-        for user_file in user_files:
-            # 6) Create connector
-            connector_base = ConnectorBase(
-                name=f"UserFile-{int(time.time())}",
-                source=DocumentSource.FILE,
-                input_type=InputType.LOAD_STATE,
-                connector_specific_config={
-                    "file_locations": [user_file.file_id],
-                    "zip_metadata": {},
-                },
-                refresh_freq=None,
-                prune_freq=None,
-                indexing_start=None,
-            )
-            connector = create_connector(
-                db_session=db_session,
-                connector_data=connector_base,
-            )
+        # 5) Create a user file for each uploaded file (skip for dataset files as they're temporary)
+        if not is_dataset_upload:
+            logger.notice(f"[DATASET_DEBUG] Creating user file for {file.filename} (not a dataset)")
+            user_files = create_user_files([file], RECENT_DOCS_FOLDER_ID, user, db_session)
+            for user_file in user_files:
+                # 6) Create connector
+                connector_base = ConnectorBase(
+                    name=f"UserFile-{int(time.time())}",
+                    source=DocumentSource.FILE,
+                    input_type=InputType.LOAD_STATE,
+                    connector_specific_config={
+                        "file_locations": [user_file.file_id],
+                        "zip_metadata": {},
+                    },
+                    refresh_freq=None,
+                    prune_freq=None,
+                    indexing_start=None,
+                )
+                connector = create_connector(
+                    db_session=db_session,
+                    connector_data=connector_base,
+                )
 
-            # 7) Create credential
-            credential_info = CredentialBase(
-                credential_json={},
-                admin_public=True,
-                source=DocumentSource.FILE,
-                curator_public=True,
-                groups=[],
-                name=f"UserFileCredential-{int(time.time())}",
-                is_user_file=True,
-            )
-            credential = create_credential(credential_info, user, db_session)
+                # 7) Create credential
+                credential_info = CredentialBase(
+                    credential_json={},
+                    admin_public=True,
+                    source=DocumentSource.FILE,
+                    curator_public=True,
+                    groups=[],
+                    name=f"UserFileCredential-{int(time.time())}",
+                    is_user_file=True,
+                )
+                credential = create_credential(credential_info, user, db_session)
 
-            # 8) Create connector credential pair
-            cc_pair = add_credential_to_connector(
-                db_session=db_session,
-                user=user,
-                connector_id=connector.id,
-                credential_id=credential.id,
-                cc_pair_name=f"UserFileCCPair-{int(time.time())}",
-                access_type=AccessType.PRIVATE,
-                auto_sync_options=None,
-                groups=[],
-            )
-            user_file.cc_pair_id = cc_pair.data
-            db_session.commit()
+                # 8) Create connector credential pair
+                cc_pair = add_credential_to_connector(
+                    db_session=db_session,
+                    user=user,
+                    connector_id=connector.id,
+                    credential_id=credential.id,
+                    cc_pair_name=f"UserFileCCPair-{int(time.time())}",
+                    access_type=AccessType.PRIVATE,
+                    auto_sync_options=None,
+                    groups=[],
+                )
+                user_file.cc_pair_id = cc_pair.data
+                db_session.commit()
+        else:
+            logger.notice(f"[DATASET_DEBUG] Skipping user file creation for dataset file {file.filename}")
 
+    logger.notice(f"[DATASET_DEBUG] Dataset files to copy: {len(dataset_files_to_copy)}")
+    
+    # Copy dataset files to sandbox if any were uploaded
+    if dataset_files_to_copy:
+        try:
+            logger.notice(f"[DATASET_DEBUG] Starting copy of {len(dataset_files_to_copy)} dataset files to sandbox...")
+            copied_paths = copy_multiple_files_to_sandbox(
+                file_mappings=dataset_files_to_copy,
+                db_session=db_session
+            )
+            logger.notice(f"[DATASET_DEBUG] Successfully copied all {len(copied_paths)} dataset files to sandbox")
+            for path in copied_paths:
+                logger.notice(f"[DATASET_DEBUG] Copied file to: {path}")
+        except Exception as e:
+            logger.error(f"[DATASET_DEBUG] Failed to copy dataset files to sandbox: {str(e)}")
+            # Don't fail the upload, but log the error - files are still available in file store
+            logger.warning("[DATASET_DEBUG] Dataset files are available in file store but not copied to sandbox. Code interpreter may not be able to access them.")
+    else:
+        logger.notice(f"[DATASET_DEBUG] No dataset files to copy")
+
+    logger.notice(f"[DATASET_DEBUG] Returning {len(file_info)} file descriptors")
     return {
         "files": [
             {"id": file_id, "type": file_type, "name": file_name}

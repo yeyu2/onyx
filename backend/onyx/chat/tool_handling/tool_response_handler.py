@@ -123,22 +123,33 @@ class ToolResponseHandler:
                 self.tool_call_chunk += response_item  # type: ignore
 
     def next_llm_call(self, current_llm_call: LLMCall) -> LLMCall | None:
+        logger.debug(f"[TOOL_HANDLER_DEBUG] next_llm_call called")
+        logger.debug(f"[TOOL_HANDLER_DEBUG] tool_runner: {self.tool_runner}")
+        logger.debug(f"[TOOL_HANDLER_DEBUG] tool_call_summary: {self.tool_call_summary}")
+        logger.debug(f"[TOOL_HANDLER_DEBUG] tool_kickoff: {self.tool_kickoff}")
+        logger.debug(f"[TOOL_HANDLER_DEBUG] tool_final_result: {self.tool_final_result}")
+        
         if (
             self.tool_runner is None
             or self.tool_call_summary is None
             or self.tool_kickoff is None
             or self.tool_final_result is None
         ):
+            logger.debug(f"[TOOL_HANDLER_DEBUG] Returning None - missing required components")
             return None
 
         tool_runner = self.tool_runner
+        logger.debug(f"[TOOL_HANDLER_DEBUG] Tool name: {tool_runner.tool.name}")
+        logger.debug(f"[TOOL_HANDLER_DEBUG] Building next prompt...")
+        
         new_prompt_builder = tool_runner.tool.build_next_prompt(
             prompt_builder=current_llm_call.prompt_builder,
             tool_call_summary=self.tool_call_summary,
             tool_responses=self.tool_responses,
             using_tool_calling_llm=current_llm_call.using_tool_calling_llm,
         )
-        return LLMCall(
+        
+        new_llm_call = LLMCall(
             prompt_builder=new_prompt_builder,
             tools=[],  # for now, only allow one tool call per response
             force_use_tool=ForceUseTool(
@@ -154,6 +165,9 @@ class ToolResponseHandler:
                 self.tool_final_result,
             ],
         )
+        
+        logger.debug(f"[TOOL_HANDLER_DEBUG] Created new LLM call with {len(new_llm_call.tool_call_info)} tool_call_info items")
+        return new_llm_call
 
 
 def get_tool_call_for_non_tool_calling_llm_impl(

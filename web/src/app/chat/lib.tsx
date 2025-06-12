@@ -717,16 +717,25 @@ export function buildChatUrl(
 }
 
 export async function uploadFilesForChat(
-  files: File[]
+  files: File[],
+  formData?: FormData
 ): Promise<[FileDescriptor[], string | null]> {
-  const formData = new FormData();
-  files.forEach((file) => {
-    formData.append("files", file);
-  });
+  let finalFormData: FormData;
+  
+  if (formData) {
+    // If formData is provided (e.g., for dataset files), use it directly
+    finalFormData = formData;
+  } else {
+    // Otherwise, create FormData from files array
+    finalFormData = new FormData();
+    files.forEach((file) => {
+      finalFormData.append("files", file);
+    });
+  }
 
   const response = await fetch("/api/chat/file", {
     method: "POST",
-    body: formData,
+    body: finalFormData,
   });
   if (!response.ok) {
     return [[], `Failed to upload files - ${(await response.json()).detail}`];

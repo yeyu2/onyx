@@ -154,6 +154,7 @@ from onyx.tools.tool_implementations.search.search_tool import (
 from onyx.tools.tool_implementations.weather.weather_tool import (
     WEATHER_RESPONSE_ID,
 )
+from onyx.tools.tool_implementations.code_interpreter.code_interpreter_tool import CODE_EXECUTION_RESPONSE_ID
 from onyx.tools.tool_runner import ToolCallFinalResult
 from onyx.utils.logger import setup_logger
 from onyx.utils.long_term_log import LongTermLogger
@@ -607,6 +608,10 @@ def _process_tool_response(
     elif packet.id == WEATHER_RESPONSE_ID:
         # Weather tool doesn't return documents, just pass through the response
         # The weather data will be included in the LLM context via build_next_prompt
+        pass
+    elif packet.id == CODE_EXECUTION_RESPONSE_ID:
+        # Code execution tool doesn't return documents, just pass through the response
+        # The execution results will be included in the LLM context via build_next_prompt
         pass
     elif packet.id == CUSTOM_TOOL_RESPONSE_ID:
         custom_tool_response = cast(CustomToolCallSummary, packet.response)

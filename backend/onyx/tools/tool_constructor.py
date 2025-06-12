@@ -40,6 +40,7 @@ from onyx.tools.tool_implementations.internet_search.internet_search_tool import
 )
 from onyx.tools.tool_implementations.search.search_tool import SearchTool
 from onyx.tools.tool_implementations.weather.weather_tool import WeatherTool
+from onyx.tools.tool_implementations.code_interpreter.code_interpreter_tool import CodeInterpreterTool
 from onyx.tools.utils import compute_all_tool_tokens
 from onyx.tools.utils import explicit_tool_calling_supported
 from onyx.utils.headers import header_dict_to_header_list
@@ -231,6 +232,10 @@ def construct_tools(
             # Handle Weather Tool
             elif tool_cls.__name__ == WeatherTool.__name__:
                 tool_dict[db_tool_model.id] = [WeatherTool()]
+
+            # Handle Code Interpreter Tool
+            elif tool_cls.__name__ == CodeInterpreterTool.__name__:
+                tool_dict[db_tool_model.id] = [CodeInterpreterTool()]
 
         # Handle custom tools
         elif db_tool_model.openapi_schema:

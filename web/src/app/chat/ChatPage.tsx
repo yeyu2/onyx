@@ -132,6 +132,7 @@ import {
   FileResponse,
   FolderResponse,
   useDocumentsContext,
+  FileStatus,
 } from "./my-documents/DocumentsContext";
 import { ChatSearchModal } from "./chat_search/ChatSearchModal";
 import { ErrorBanner } from "./message/Resubmit";
@@ -1479,16 +1480,24 @@ export function ChatPage({
       
       if (datasetFiles.length > 0 || hasSelectedDatasets) {
         console.log(`[DEBUG] Building dataset instructions for prompt`);
-        datasetInstructions = "IMPORTANT: The user has dataset files or filtered for specific datasets for analysis. When asked about these datasets:\n";
-        datasetInstructions += "1. DO NOT use RAG or retrieved content to answer questions about these datasets.\n";
-        datasetInstructions += "2. ONLY generate Python code that could analyze the data without executing it.\n";
-        datasetInstructions += "3. Explain what the code would do if executed, but do not claim to have actual results.\n\n";
+        datasetInstructions = "IMPORTANT: The user has provided dataset files with complete schema information and sample data below. ";
+        datasetInstructions += "Use the code interpreter tool to analyze the data and answer the user's question.\n\n";
+        datasetInstructions += "ANALYSIS APPROACH:\n";
+        datasetInstructions += "1. When the user asks questions about the data, use the code interpreter tool to execute Python code\n";
+        datasetInstructions += "2. Write complete analysis code that directly addresses the user's specific question\n";
+        datasetInstructions += "3. After receiving tool execution results, provide a clear natural language answer based on those results\n";
+        datasetInstructions += "4. Do not generate additional code after receiving tool results - interpret and summarize the findings\n";
+        datasetInstructions += "5. Include data validation, filtering, calculations, and formatted output in your code execution\n";
+        datasetInstructions += "6. Use pandas, numpy, matplotlib as needed for comprehensive analysis\n";
+        datasetInstructions += "7. Always show your reasoning and calculations clearly in the code output\n";
+        datasetInstructions += "8. Structure your final response to directly answer the user's question with clear results\n";
+        datasetInstructions += "9. For Excel files with datamaps: Use actual column names from data sheets (e.g., 'hQS3', 'QA4r1') not datamap descriptions. Extract column names from brackets in datamap text.\n\n";
         
         // Add information about selected datasets from filters
         if (hasSelectedDatasets) {
-          datasetInstructions += "Selected datasets:\n";
+          datasetInstructions += "AVAILABLE DATASETS:\n";
           filterManager.selectedDatasets.forEach(datasetName => {
-            datasetInstructions += `- ${datasetName} (available at: ${DATASET_CONFIG.basePath}${datasetName})\n`;
+            datasetInstructions += `- ${datasetName} (${DATASET_CONFIG.basePath}${datasetName})\n`;
           });
           datasetInstructions += "\n";
         }
@@ -1496,7 +1505,7 @@ export function ChatPage({
         // Add information about uploaded dataset files
         if (datasetFiles.length > 0) {
           console.log(`[DEBUG] Adding ${datasetFiles.length} uploaded dataset files to instructions`);
-          datasetInstructions += "The following dataset files are available:\n";
+          datasetInstructions += "DATASET FILES WITH COMPLETE SCHEMA INFORMATION:\n";
           datasetFiles.forEach(file => {
             const meta = file.metadata || { path: `${DATASET_CONFIG.basePath}${file.name}` };
             const fileType = 'fileType' in meta ? meta.fileType : 'unknown type';
@@ -1508,8 +1517,8 @@ export function ChatPage({
             // Get the file extension to determine type
             const fileExt = file.name ? file.name.split('.').pop()?.toLowerCase() : '';
             
-            datasetInstructions += `- ${file.name} (${fileType}, ${fileSize})\n`;
-            datasetInstructions += `  Available at: ${meta.path}\n`;
+            datasetInstructions += `\nFILE: ${file.name} (${fileType}, ${fileSize})\n`;
+            datasetInstructions += `PATH: ${meta.path}\n`;
             
             // Add schema information from the file metadata if available
             if (meta && 'schema' in meta && meta.schema) {
@@ -1519,6 +1528,14 @@ export function ChatPage({
                 columns?: Array<{name: string, type: string}>;
                 sampleData?: string;
                 rowCount?: number;
+                sheets?: Array<{
+                  name: string;
+                  columns: Array<{name: string, type: string}>;
+                  rowCount: number;
+                  sampleData: string;
+                }>;
+                datamap?: string;
+                rawHeaders?: string; // Add support for raw header rows
               };
               
               const schema = meta.schema as SchemaType;
@@ -1526,82 +1543,224 @@ export function ChatPage({
                 hasDescription: !!schema.description,
                 columnCount: schema.columns?.length || 0,
                 hasSampleData: !!schema.sampleData,
-                rowCount: schema.rowCount || 0
+                rowCount: schema.rowCount || 0,
+                hasSheets: !!(schema.sheets && schema.sheets.length > 0),
+                hasDatamap: !!schema.datamap,
+                hasRawHeaders: !!schema.rawHeaders
               });
+              
+              // Print datamap separately for debugging (not in main instructions)
+              if (schema.datamap) {
+                console.log(`[DEBUG] DATAMAP CONTENT for ${file.name}:`);
+                console.log(schema.datamap);
+              }
               
               // Add file description
               if (schema.description) {
-                datasetInstructions += `  Description: ${schema.description}\n`;
+                datasetInstructions += `DESCRIPTION: ${schema.description}\n`;
               }
               
-              // Add column information
-              if (schema.columns && schema.columns.length > 0) {
-                console.log(`[DEBUG] Adding ${schema.columns.length} columns to prompt for ${file.name}`);
-                datasetInstructions += `  Schema:\n`;
-                schema.columns.forEach((column: {name: string, type: string}) => {
-                  datasetInstructions += `    - ${column.name} (${column.type})\n`;
+              // Add row count
+              if (schema.rowCount) {
+                datasetInstructions += `TOTAL ROWS: ${schema.rowCount}\n`;
+              }
+              
+              // For Excel files with multiple sheets, provide concise overview
+              if (schema.sheets && schema.sheets.length > 0) {
+                console.log(`[DEBUG] Adding ${schema.sheets.length} sheets info to prompt for ${file.name}`);
+                datasetInstructions += `EXCEL SHEETS (${schema.sheets.length} total):\n`;
+                schema.sheets.forEach((sheet) => {
+                  datasetInstructions += `  - "${sheet.name}": ${sheet.rowCount} rows, ${sheet.columns.length} columns\n`;
                 });
-              }
-              
-              // Add sample data
-              if (schema.sampleData) {
-                console.log(`[DEBUG] Adding sample data to prompt for ${file.name}`);
-                datasetInstructions += `  Sample data (first few rows):\n`;
-                datasetInstructions += `  \`\`\`json\n  ${schema.sampleData}\n  \`\`\`\n`;
+                
+                // Add column information for the main data sheet (first non-datamap sheet)
+                const mainSheet = schema.sheets.find(sheet => 
+                  !sheet.name.toLowerCase().includes('datamap') && 
+                  !sheet.name.toLowerCase().includes('overview') &&
+                  !sheet.name.toLowerCase().includes('readme')
+                ) || schema.sheets[0];
+                
+                if (mainSheet) {
+                  datasetInstructions += `\nMAIN DATA SHEET: "${mainSheet.name}"\n`;
+                  
+                  // Check if column detection failed (0 columns) for Excel files
+                  if (mainSheet.columns.length === 0 && (fileExt === 'xlsx' || fileExt === 'xls')) {
+                    console.log(`[DEBUG] Column detection failed for Excel file ${file.name}, including raw headers`);
+                    datasetInstructions += `COLUMN DETECTION: Failed to automatically detect columns\n`;
+                    
+                    // Include raw header information if available
+                    if (schema.rawHeaders) {
+                      console.log(`[DEBUG] Including raw headers for ${file.name}:`, schema.rawHeaders);
+                      datasetInstructions += `RAW HEADER ROWS (first 4 rows for header detection):\n${schema.rawHeaders}\n`;
+                      datasetInstructions += `NOTE: Please examine the raw rows above to determine which row contains the column headers and load the data accordingly.\n`;
+                    } else {
+                      console.log(`[WARNING] No raw header data available for ${file.name}. Column detection failed and no fallback data provided.`);
+                      console.log(`[INFO] The model will need to inspect the file directly to determine the header structure.`);
+                      datasetInstructions += `WARNING: No raw header data available. The model will inspect the file structure directly.\n`;
+                    }
+                    
+                    // Provide flexible loading instructions
+                    datasetInstructions += `LOADING INSTRUCTIONS: Use pd.read_excel('${meta.path}', sheet_name='${mainSheet.name}', header=None) to load raw data, then inspect the first few rows to determine the header row.\n`;
+                  } else {
+                    datasetInstructions += `COLUMNS (${mainSheet.columns.length} total): ${mainSheet.columns.map(c => `${c.name}(${c.type})`).join(', ')}\n`;
+                  }
+                  
+                  // Add concise sample data (first 2 rows only)
+                  if (mainSheet.sampleData) {
+                    try {
+                      const sampleData = JSON.parse(mainSheet.sampleData);
+                      if (Array.isArray(sampleData) && sampleData.length > 0) {
+                        datasetInstructions += `SAMPLE DATA (first 2 rows):\n${JSON.stringify(sampleData.slice(0, 2), null, 1)}\n`;
+                      }
+                    } catch (e) {
+                      // If parsing fails, skip sample data
+                    }
+                  }
+                  
+                  // Note about datamap availability
+                  if (schema.datamap) {
+                    datasetInstructions += `\nNOTE: This Excel file includes a datamap/overview sheet with field definitions and descriptions.\n`;
+                  }
+                }
+              } else {
+                // Add column information for non-Excel files or Excel files with single sheet view
+                if (schema.columns && schema.columns.length > 0) {
+                  console.log(`[DEBUG] Adding ${schema.columns.length} columns to prompt for ${file.name}`);
+                  datasetInstructions += `COLUMNS (${schema.columns.length} total): ${schema.columns.map(c => `${c.name}(${c.type})`).join(', ')}\n`;
+                } else if (fileExt === 'xlsx' || fileExt === 'xls') {
+                  // For Excel files with failed column detection, include raw headers
+                  console.log(`[DEBUG] Column detection failed for Excel file ${file.name}, including raw headers`);
+                  datasetInstructions += `COLUMN DETECTION: Failed to automatically detect columns\n`;
+                  
+                  if (schema.rawHeaders) {
+                    console.log(`[DEBUG] Including raw headers for ${file.name}:`, schema.rawHeaders);
+                    datasetInstructions += `RAW HEADER ROWS (first 4 rows for header detection):\n${schema.rawHeaders}\n`;
+                    datasetInstructions += `NOTE: Please examine the raw rows above to determine which row contains the column headers and load the data accordingly.\n`;
+                  } else {
+                    console.log(`[WARNING] No raw header data available for ${file.name}. Column detection failed and no fallback data provided.`);
+                    console.log(`[INFO] The model will need to inspect the file directly to determine the header structure.`);
+                    datasetInstructions += `WARNING: No raw header data available. The model will inspect the file structure directly.\n`;
+                  }
+                  
+                  datasetInstructions += `LOADING INSTRUCTIONS: Use pd.read_excel('${meta.path}', header=None) to load raw data, then inspect the first few rows to determine the header row.\n`;
+                }
+                
+                // Add concise sample data (first 2 rows only)
+                if (schema.sampleData) {
+                  console.log(`[DEBUG] Adding sample data to prompt for ${file.name}`);
+                  try {
+                    const sampleData = JSON.parse(schema.sampleData);
+                    if (Array.isArray(sampleData) && sampleData.length > 0) {
+                      datasetInstructions += `SAMPLE DATA (first 2 rows):\n${JSON.stringify(sampleData.slice(0, 2), null, 1)}\n`;
+                    } else {
+                      datasetInstructions += `SAMPLE DATA:\n${JSON.stringify(sampleData, null, 1)}\n`;
+                    }
+                  } catch (e) {
+                    datasetInstructions += `SAMPLE DATA:\n${schema.sampleData.substring(0, 200)}...\n`;
+                  }
+                }
               }
             } 
-            // If no schema is available, add generic information based on file type
-            else if (fileExt === 'csv') {
-              console.log(`[DEBUG] No schema available for CSV file ${file.name}, using generic description`);
-              datasetInstructions += `  Description: CSV file with tabular data.\n`;
-              datasetInstructions += `  Schema Information: This is a CSV file which likely contains a header row with column names, followed by data rows.\n`;
-              datasetInstructions += `  Usage Guide: Use pandas to read this file with:\n`;
-              datasetInstructions += `    \`\`\`python\n    import pandas as pd\n    df = pd.read_csv('${meta.path}')\n    # Examine the structure\n    df.head()\n    df.info()\n    df.describe()\n    \`\`\`\n`;
-            } 
-            else if (fileExt === 'xlsx' || fileExt === 'xls') {
-              console.log(`[DEBUG] No schema available for Excel file ${file.name}, using generic description`);
-              datasetInstructions += `  Description: Excel spreadsheet file which may contain multiple sheets.\n`;
-              datasetInstructions += `  Schema Information: This is an Excel file which may contain multiple sheets, each with tabular data.\n`;
-              datasetInstructions += `  Usage Guide: Use pandas to read this file with:\n`;
-              datasetInstructions += `    \`\`\`python\n    import pandas as pd\n    # Read the first sheet\n    df = pd.read_excel('${meta.path}')\n    # Or specify a sheet\n    # df = pd.read_excel('${meta.path}', sheet_name='Sheet1')\n    # List all sheets\n    # xls = pd.ExcelFile('${meta.path}')\n    # sheet_names = xls.sheet_names\n    \`\`\`\n`;
+            // If no schema is available, add basic file information
+            else {
+              console.log(`[DEBUG] No schema available for ${file.name}, adding basic info`);
+              datasetInstructions += `FILE TYPE: ${fileExt?.toUpperCase() || 'Unknown'} file\n`;
+              if (fileExt === 'csv') {
+                datasetInstructions += `FORMAT: CSV with header row, comma-separated values\n`;
+                datasetInstructions += `USAGE: df = pd.read_csv('${meta.path}')\n`;
+              } else if (fileExt === 'xlsx' || fileExt === 'xls') {
+                datasetInstructions += `FORMAT: Excel spreadsheet, may have multiple sheets\n`;
+                datasetInstructions += `USAGE: df = pd.read_excel('${meta.path}') # loads first sheet\n`;
+                datasetInstructions += `       or df = pd.read_excel('${meta.path}', sheet_name='SheetName') # loads specific sheet\n`;
+                datasetInstructions += `       or pd.read_excel('${meta.path}', sheet_name=None) # loads all sheets as dict\n`;
+                datasetInstructions += `       or pd.read_excel('${meta.path}', header=None) # loads without assuming header row\n`;
+              } else if (fileExt === 'json') {
+                datasetInstructions += `FORMAT: JSON data, may be array of objects or nested structure\n`;
+                datasetInstructions += `USAGE: df = pd.read_json('${meta.path}') or pd.json_normalize()\n`;
+              }
             }
-            else if (fileExt === 'json') {
-              console.log(`[DEBUG] No schema available for JSON file ${file.name}, using generic description`);
-              datasetInstructions += `  Description: JSON file which may contain structured data.\n`;
-              datasetInstructions += `  Schema Information: This is a JSON file which could contain an array of objects or a nested object structure.\n`;
-              datasetInstructions += `  Usage Guide: Use pandas to read this file with:\n`;
-              datasetInstructions += `    \`\`\`python\n    import pandas as pd\n    import json\n    # For JSON arrays\n    df = pd.read_json('${meta.path}')\n    # For nested JSON\n    # with open('${meta.path}') as f:\n    #     data = json.load(f)\n    # df = pd.json_normalize(data)\n    \`\`\`\n`;
-            }
-            
-            datasetInstructions += `\n`;
           });
         }
         
-        datasetInstructions += "\nWhen analyzing these datasets, use code like:\n```python\nimport pandas as pd\nimport matplotlib.pyplot as plt\nimport numpy as np\n\n";
+        datasetInstructions += "\nCODE TEMPLATE FOR COMPREHENSIVE ANALYSIS:\n";
+        datasetInstructions += "```python\n";
+        datasetInstructions += "import pandas as pd\n";
+        datasetInstructions += "import numpy as np\n";
+        datasetInstructions += "import matplotlib.pyplot as plt\n\n";
         
         // Add specific dataset loading examples based on available datasets
         if (hasSelectedDatasets) {
-          datasetInstructions += "# Example for loading these datasets:\n";
+          datasetInstructions += "# Load datasets:\n";
           filterManager.selectedDatasets.forEach(datasetName => {
             const fileExt = datasetName.split('.').pop()?.toLowerCase();
+            const varName = datasetName.replace(/\.\w+$/, '').replace(/\W+/g, '_');
             if (fileExt === 'csv') {
-              datasetInstructions += `df_${datasetName.replace(/\.\w+$/, '').replace(/\W+/g, '_')} = pd.read_csv('${DATASET_CONFIG.basePath}${datasetName}')\n`;
+              datasetInstructions += `df = pd.read_csv('${DATASET_CONFIG.basePath}${datasetName}')\n`;
             } else if (fileExt === 'xlsx' || fileExt === 'xls') {
-              datasetInstructions += `df_${datasetName.replace(/\.\w+$/, '').replace(/\W+/g, '_')} = pd.read_excel('${DATASET_CONFIG.basePath}${datasetName}')\n`;
+              datasetInstructions += `df = pd.read_excel('${DATASET_CONFIG.basePath}${datasetName}')\n`;
             } else if (fileExt === 'json') {
-              datasetInstructions += `df_${datasetName.replace(/\.\w+$/, '').replace(/\W+/g, '_')} = pd.json_normalize(pd.read_json('${DATASET_CONFIG.basePath}${datasetName}'))\n`;
-            } else {
-              datasetInstructions += `# For '${datasetName}', determine the appropriate method to load based on file type\n`;
+              datasetInstructions += `df = pd.read_json('${DATASET_CONFIG.basePath}${datasetName}')\n`;
             }
           });
-        } else {
-          datasetInstructions += "# Example for loading a CSV file\ndf = pd.read_csv('${DATASET_CONFIG.basePath}filename.csv')\n# Or for Excel\n# df = pd.read_excel('${DATASET_CONFIG.basePath}filename.xlsx')\n# Or for JSON\n# df = pd.json_normalize(pd.read_json('${DATASET_CONFIG.basePath}filename.json'))\n";
+        } else if (datasetFiles.length > 0) {
+          datasetInstructions += "# Load the dataset:\n";
+          const firstFile = datasetFiles[0];
+          const meta = firstFile?.metadata || { path: `${DATASET_CONFIG.basePath}${firstFile?.name || 'unknown'}` };
+          const fileExt = firstFile?.name ? firstFile.name.split('.').pop()?.toLowerCase() : '';
+          
+          // Check if we have schema info with sheets
+          const schema = meta && 'schema' in meta ? meta.schema as any : null;
+          const hasSheets = schema && schema.sheets && schema.sheets.length > 0;
+          const hasFailedColumnDetection = hasSheets && schema.sheets.some((sheet: any) => sheet.columns.length === 0);
+          
+          if (fileExt === 'csv') {
+            datasetInstructions += `df = pd.read_csv('${meta.path}')\n`;
+          } else if (fileExt === 'xlsx' || fileExt === 'xls') {
+            if (hasSheets) {
+              const mainSheet = schema.sheets.find((sheet: any) => 
+                !sheet.name.toLowerCase().includes('datamap') && 
+                !sheet.name.toLowerCase().includes('overview') &&
+                !sheet.name.toLowerCase().includes('readme')
+              ) || schema.sheets[0];
+              
+              if (hasFailedColumnDetection || mainSheet.columns.length === 0) {
+                datasetInstructions += `# Excel file with ${schema.sheets.length} sheets - column detection failed:\n`;
+                datasetInstructions += `# First, load without header assumption to inspect structure\n`;
+                datasetInstructions += `df_raw = pd.read_excel('${meta.path}', sheet_name='${mainSheet.name}', header=None)\n`;
+                datasetInstructions += `print("First 4 rows to identify header:")\n`;
+                datasetInstructions += `print(df_raw.head(4))\n`;
+                datasetInstructions += `# Then load with correct header row (usually 0, 1, or 2)\n`;
+                datasetInstructions += `df = pd.read_excel('${meta.path}', sheet_name='${mainSheet.name}', header=0)  # Adjust header= as needed\n`;
+              } else {
+                datasetInstructions += `# Excel file with ${schema.sheets.length} sheets:\n`;
+                if (schema.sheets.length === 1) {
+                  datasetInstructions += `df = pd.read_excel('${meta.path}', sheet_name='${schema.sheets[0].name}')\n`;
+                } else {
+                  datasetInstructions += `df = pd.read_excel('${meta.path}', sheet_name='${schema.sheets[0].name}')  # Main sheet\n`;
+                  datasetInstructions += `# For all sheets: all_sheets = pd.read_excel('${meta.path}', sheet_name=None)\n`;
+                }
+              }
+            } else {
+              datasetInstructions += `df = pd.read_excel('${meta.path}')\n`;
+            }
+          } else if (fileExt === 'json') {
+            datasetInstructions += `df = pd.read_json('${meta.path}')\n`;
+          } else {
+            datasetInstructions += `# Load the data using appropriate pandas method\n`;
+          }
         }
         
-        datasetInstructions += "\n# Now analyze the data...\n```";
+        datasetInstructions += "\n# Perform complete analysis to answer the user's question:\n";
+        datasetInstructions += "# - Apply filters, groupings, calculations as needed\n";
+        datasetInstructions += "# - Show reasoning and intermediate results\n";
+        datasetInstructions += "# - Provide final formatted output that directly answers the question\n";
+        datasetInstructions += "```\n\n";
+        
+        datasetInstructions += "Generate ONE complete code block that fully answers the user's question using the schema information provided above.";
         
         console.log(`[DEBUG] Final dataset instructions length: ${datasetInstructions.length} characters`);
         console.log(`[DEBUG] Dataset instructions snippet (first 200 chars): ${datasetInstructions.substring(0, 200)}...`);
+        console.log(`[INFO] Dataset analysis mode enabled: RAG disabled, direct file analysis with fallback header detection`);
       }
 
       await updateCurrentMessageFIFO(stack, {
@@ -2202,7 +2361,42 @@ export function ChatPage({
         }
       }
       
-      const response: FileResponse[] = await uploadFile(formData, null);
+      // Use different upload endpoints based on intent
+      let response: FileResponse[];
+      
+      if (intent === UploadIntent.DATASET) {
+        // For dataset files, use the chat upload endpoint which handles dataset copying
+        console.log(`[DEBUG] Uploading dataset file ${file.name} to chat endpoint`);
+        const [fileDescriptors, error] = await uploadFilesForChat([file], formData);
+        
+        if (error) {
+          setPopup({
+            type: "error",
+            message: `Failed to upload dataset file: ${error}`,
+          });
+          continue;
+        }
+        
+        // Convert FileDescriptor to FileResponse format for compatibility
+        response = fileDescriptors.map(fd => ({
+          id: parseInt(fd.id) || 0,
+          name: fd.name || file.name,
+          document_id: fd.id,
+          folder_id: null,
+          size: file.size,
+          type: file.type,
+          lastModified: file.lastModified ? new Date(file.lastModified).toISOString() : new Date().toISOString(),
+          file_id: fd.id,
+          file_type: fd.type,
+          status: FileStatus.INDEXED,
+          chat_file_type: fd.type,
+        }));
+        
+        console.log(`[DEBUG] Dataset file ${file.name} uploaded successfully via chat endpoint`);
+      } else {
+        // For regular files, use the documents upload endpoint
+        response = await uploadFile(formData, null);
+      }
 
       if (response.length > 0 && response[0] !== undefined) {
         const uploadedFile = response[0];

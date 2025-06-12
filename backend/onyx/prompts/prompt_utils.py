@@ -198,7 +198,7 @@ def drop_messages_history_overflow(
     for i, (message, token_count) in enumerate(messages_with_token_cnts):
         role = message.type
         content = message.content if isinstance(message.content, str) else "Non-text content"
-        truncated_content = content[:2000] + "..." if len(content) > 500 else content
+        truncated_content = content[:50000] + "..." if len(content) > 50000 else content
         logger.debug(f"Message {i} ({role}): {token_count} tokens - {truncated_content}")
     
     # Continue with existing logic

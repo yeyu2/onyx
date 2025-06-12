@@ -53,6 +53,27 @@ from onyx.tools.utils import explicit_tool_calling_supported
             ["model-NOT-this-one"],
             True,
         ),
+        # === OpenAI newer models (should always be True due to explicit support) ===
+        # o3 models should be explicitly supported
+        ("openai", "o3", False, [], True),
+        ("openai", "o3-mini", False, [], True),
+        ("openai", "o3-preview", False, [], True),
+        ("openai", "o3-mini-2025-01-31", False, [], True),
+        # o4 models should be explicitly supported
+        ("openai", "o4", False, [], True),
+        ("openai", "o4-mini", False, [], True),
+        # o1 models should be explicitly supported
+        ("openai", "o1", False, [], True),
+        ("openai", "o1-mini", False, [], True),
+        ("openai", "o1-preview", False, [], True),
+        ("openai", "o1-mini-2024-09-12", False, [], True),
+        # Standard GPT models should be explicitly supported
+        ("openai", "gpt-4", False, [], True),
+        ("openai", "gpt-4o", False, [], True),
+        ("openai", "gpt-4o-mini", False, [], True),
+        ("openai", "gpt-4-turbo", False, [], True),
+        ("openai", "gpt-3.5-turbo", False, [], True),
+        ("openai", "gpt-3.5-turbo-0125", False, [], True),
     ],
 )
 @patch("onyx.tools.utils.find_model_obj")
@@ -73,6 +94,9 @@ def test_explicit_tool_calling_supported(
     We don't want to provide that list of tools because our UI doesn't support sequential
     tool calling yet for (a) and just looks bad for (b), so for now we just treat anthropic
     models as non-tool-calling.
+    
+    OpenAI models (especially newer ones like o3, o3-mini, o4) should be explicitly supported
+    for tool calling even if they're not properly configured in the LiteLLM model map yet.
     """
     mock_find_model_obj.return_value = {
         "supports_function_calling": mock_model_supports_fc
